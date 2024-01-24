@@ -1,9 +1,10 @@
 package option_test
 
 import (
+	"encoding/json"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
 	"go.l0nax.org/typact"
 )
 
@@ -72,6 +73,107 @@ var _ = Describe("Option", func() {
 		})
 	})
 
+	Describe("Or", func() {
+		It("when first is Some and second is Some", func() {
+			val := typact.Some("this is my option")
+			other := typact.Some("other option")
+
+			newVal := val.Or(other)
+
+			Expect(newVal.Unwrap()).To(BeEquivalentTo("this is my option"))
+		})
+
+		It("when first is Some and second is None", func() {
+			val := typact.Some("this is my option")
+			other := typact.None[string]()
+
+			newVal := val.Or(other)
+
+			Expect(newVal.Unwrap()).To(BeEquivalentTo("this is my option"))
+		})
+
+		It("when first is None and second is Some", func() {
+			val := typact.None[string]()
+			other := typact.Some("other option")
+
+			newVal := val.Or(other)
+
+			Expect(newVal.Unwrap()).To(BeEquivalentTo("other option"))
+		})
+
+		It("when first is None and second is None", func() {
+			val := typact.None[string]()
+			other := typact.None[string]()
+
+			newVal := val.Or(other)
+
+			Expect(newVal.IsNone()).To(BeTrue())
+		})
+	})
+
+	Describe("Unwrap", func() {
+		It("should return the value", func() {
+			x := typact.Some(5)
+			Expect(x.Unwrap()).To(Equal(5))
+		})
+
+		It("should panic", func() {
+			x := typact.None[int]()
+			Expect(
+				func() {
+					x.Unwrap()
+				}).
+				To(Panic())
+		})
+	})
+
+	Describe("UnwrapOrZero", func() {
+		It("should return the value", func() {
+			x := typact.Some(5)
+			Expect(x.UnwrapOrZero()).To(Equal(5))
+		})
+
+		It("should return the zero value", func() {
+			x := typact.None[int]()
+			Expect(x.UnwrapOrZero()).To(Equal(0))
+		})
+	})
+
+	Describe("UnwrapOrElse", func() {
+		getTwo := func() int {
+			return 2
+		}
+
+		It("should return the value", func() {
+			x := typact.Some(5)
+			Expect(x.UnwrapOrElse(getTwo)).To(Equal(5))
+		})
+
+		It("should return the zero value", func() {
+			x := typact.None[int]()
+			Expect(x.UnwrapOrElse(getTwo)).To(Equal(2))
+		})
+	})
+
+	Describe("UnwrapAsRef", func() {
+		It("should return a pointer to the value", func() {
+			x := typact.Some(5)
+
+			ref := x.UnwrapAsRef()
+			*ref = 10
+			Expect(x.Unwrap()).To(Equal(10))
+		})
+
+		It("should panic", func() {
+			x := typact.None[int]()
+			Expect(
+				func() {
+					x.UnwrapAsRef()
+				}).
+				To(Panic())
+		})
+	})
+
 	Describe("Insert", func() {
 		It("should change the value once we change it via the pointer", func() {
 			opt := typact.None[int]()
@@ -128,16 +230,19 @@ var _ = Describe("Option", func() {
 	})
 
 	Describe("AndThen", func() {
-		It("should apply the function and return the new option when the option is present", func() {
-			option := typact.Some(5)
-			fn := func(val int) typact.Option[int] {
-				return typact.Some(val * 2)
-			}
+		It(
+			"should apply the function and return the new option when the option is present",
+			func() {
+				option := typact.Some(5)
+				fn := func(val int) typact.Option[int] {
+					return typact.Some(val * 2)
+				}
 
-			newOption := option.AndThen(fn)
-			Expect(newOption.IsSome()).To(BeTrue())
-			Expect(newOption.UnsafeUnwrap()).To(Equal(10))
-		})
+				newOption := option.AndThen(fn)
+				Expect(newOption.IsSome()).To(BeTrue())
+				Expect(newOption.UnsafeUnwrap()).To(Equal(10))
+			},
+		)
 
 		It("should return None when the option is not present", func() {
 			option := typact.None[int]()
@@ -172,7 +277,7 @@ var _ = Describe("Option", func() {
 	})
 
 	Describe("Filter", func() {
-		var isEven = func(n int) bool { return n%2 == 0 }
+		isEven := func(n int) bool { return n%2 == 0 }
 
 		It("should return None when the original option is None", func() {
 			original := typact.None[int]()
@@ -181,12 +286,15 @@ var _ = Describe("Option", func() {
 			Expect(result.IsSome()).To(BeFalse())
 		})
 
-		It("should return None when the original option is Some but does not satisfy the filter function", func() {
-			original := typact.Some[int](3)
-			result := original.Filter(isEven)
+		It(
+			"should return None when the original option is Some but does not satisfy the filter function",
+			func() {
+				original := typact.Some[int](3)
+				result := original.Filter(isEven)
 
-			Expect(result.IsSome()).To(BeFalse())
-		})
+				Expect(result.IsSome()).To(BeFalse())
+			},
+		)
 
 		It("should return the original option when it satisfies the filter function", func() {
 			original := typact.Some[int](4)
@@ -300,6 +408,73 @@ var _ = Describe("Option", func() {
 				})
 
 			Expect(ref.Wrapper.Unwrap().Number).To(BeEquivalentTo(89722))
+		})
+	})
+
+	Describe("JSON", func() {
+		type MyData struct {
+			Str typact.Option[string] `json:"str"`
+			Num typact.Option[int]    `json:"num"`
+		}
+
+		Context("Unmarshal", func() {
+			It("should be able to handle null", func() {
+				const raw = `{"str":null,"num":125}`
+
+				var data MyData
+
+				err := json.Unmarshal([]byte(raw), &data)
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(data.Str.IsNone()).To(BeTrue())
+				Expect(data.Num.Unwrap()).To(BeEquivalentTo(125))
+			})
+
+			It("should handle missing fields", func() {
+				const raw = `{"num":125}`
+
+				var data MyData
+
+				err := json.Unmarshal([]byte(raw), &data)
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(data.Str.IsNone()).To(BeTrue())
+				Expect(data.Num.Unwrap()).To(BeEquivalentTo(125))
+			})
+
+			It("should handle empty fields", func() {
+				const raw = `{"str":"","num":125}`
+
+				var data MyData
+
+				err := json.Unmarshal([]byte(raw), &data)
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(data.Str.Unwrap()).To(BeEquivalentTo(""))
+				Expect(data.Num.Unwrap()).To(BeEquivalentTo(125))
+			})
+
+			It("should handle invalid JSON", func() {
+				const raw = `{"num":null,"str":}`
+
+				var data MyData
+
+				err := json.Unmarshal([]byte(raw), &data)
+				Expect(err).To(HaveOccurred())
+			})
+		})
+
+		Context("Marshal", func() {
+			It("should correctly encode None", func() {
+				data := MyData{
+					Str: typact.None[string](),
+					Num: typact.Some(125),
+				}
+
+				b, err := json.Marshal(data)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(string(b)).To(BeEquivalentTo(`{"str":null,"num":125}`))
+			})
 		})
 	})
 })

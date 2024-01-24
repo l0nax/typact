@@ -81,3 +81,20 @@ func ExampleOption_Deconstruct() {
 	// "foo", true
 	// "", false
 }
+
+func ExampleOption_GetOrInsertWith() {
+	x := typact.None[int]()
+
+	{
+		y := x.GetOrInsertWith(func() int { return 2 })
+		fmt.Println(*y)
+
+		*y = 20
+	}
+
+	fmt.Println(x.Unwrap())
+
+	// Output:
+	// 2
+	// 20
+}
