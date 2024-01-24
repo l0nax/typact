@@ -177,6 +177,25 @@ func (o *Option[T]) GetOrInsertWith(fn func() T) *T {
 	return o.UnwrapAsRef()
 }
 
+// And returns [None] if o is [None], otherwise opt is returned.
+func (o Option[T]) And(opt Option[T]) Option[T] {
+	if o.IsSome() {
+		return opt
+	}
+
+	return None[T]()
+}
+
+// AndThen returns None if o is none, otherwise fn is called and the return
+// value is wrapped and returned.
+func (o Option[T]) AndThen(fn func(T) Option[T]) Option[T] {
+	if o.IsSome() {
+		return fn(o.val)
+	}
+
+	return None[T]()
+}
+
 // Or returns the option if it contains a value, otherwise returns value.
 func (o Option[T]) Or(value Option[T]) Option[T] {
 	if o.IsSome() {
