@@ -36,6 +36,21 @@ func Some[T any](val T) Option[T] {
 	}
 }
 
+// TryWrap executes fn and wraps the value in an [Option].
+func TryWrap[T any](fn func() (T, bool)) Option[T] {
+	return Wrap(fn())
+}
+
+// Wrap wraps val and some into an [Option].
+//
+// To eagerly evaluate and wrap a value, use [TryWrap].
+func Wrap[T any](val T, some bool) Option[T] {
+	return Option[T]{
+		some: some,
+		val:  val,
+	}
+}
+
 // IsSome returns true if o contains a value.
 //
 //gcassert:inline
@@ -87,6 +102,36 @@ func (o Option[T]) UnwrapOr(value T) T {
 	}
 
 	return value
+}
+
+// UnwrapOrZero returns the value of o, if present
+// Otherwise the zero value of T is returned
+func (o Option[T]) UnwrapOrZero() T {
+	if o.IsSome() {
+		return o.val
+	}
+
+	return zeroValue[T]()
+}
+
+// UnwrapAsRef unwraps o and returns the reference to the value.
+// If the value is not present, this method will panic.
+func (o *Option[T]) UnwrapAsRef() *T {
+	if o.IsSome() {
+		return &o.val
+	}
+
+	panic("option does not contain a value")
+}
+
+// UnwrapOrElse returns the value of o, if present.
+// Otherwise it executes fn and returns the value.
+func (o Option[T]) UnwrapOrElse(fn func() T) T {
+	if o.IsSome() {
+		return o.val
+	}
+
+	return fn()
 }
 
 // Inspect executes fn if o contains a value.
