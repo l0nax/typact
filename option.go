@@ -177,6 +177,25 @@ func (o *Option[T]) GetOrInsertWith(fn func() T) *T {
 	return o.UnwrapAsRef()
 }
 
+// Or returns the option if it contains a value, otherwise returns value.
+func (o Option[T]) Or(value Option[T]) Option[T] {
+	if o.IsSome() {
+		return o
+	}
+
+	return value
+}
+
+// OrElse returns o, if [Some].
+// Otherwise the return value of valueFn is returned.
+func (o Option[T]) OrElse(valueFn func() Option[T]) Option[T] {
+	if o.IsSome() {
+		return o
+	}
+
+	return valueFn()
+}
+
 // Scan implements the [sql.Scanner] interface.
 func (o *Option[T]) Scan(src any) error {
 	// reset first
