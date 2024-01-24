@@ -1,8 +1,8 @@
 #!/usr/bin/bash
 
-set -o errexit   # abort on nonzero exitstatus
-set -o nounset   # abort on unbound variable
-set -o pipefail  # don't hide errors within pipes
+set -o errexit  # abort on nonzero exitstatus
+set -o nounset  # abort on unbound variable
+set -o pipefail # don't hide errors within pipes
 
 export COVDATA="$(pwd)/covdata"
 
@@ -29,6 +29,7 @@ mkdir -p ./coverage
 go tool covdata merge -i="${COVDATA}" -o ./coverage
 
 go tool covdata percent -i ./coverage
+go tool covdata textfmt -i ./coverage -o ./coverage.txt
 go tool cover -html=coverage.txt
 
 rm -rf ${COVDATA}
