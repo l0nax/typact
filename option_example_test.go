@@ -66,3 +66,18 @@ func ExampleOption_Inspect() {
 	// Output:
 	// foo
 }
+
+func ExampleOption_Deconstruct() {
+	x := typact.Some("foo")
+
+	val, ok := x.Deconstruct()
+	fmt.Printf("%q, %t\n", val, ok)
+
+	y := typact.None[string]()
+	val, ok = y.Deconstruct()
+	fmt.Printf("%q, %t\n", val, ok)
+
+	// Output:
+	// "foo", true
+	// "", false
+}
