@@ -144,6 +144,39 @@ func (o Option[T]) Inspect(fn func(T)) Option[T] {
 	return o
 }
 
+// Inserts val into o and returns the reference to the inserted value.
+// If the option already contains a value, the old value is dropped.
+//
+// See [GetOrInsert] which doesn't update the value if the option already contains [Some].
+func (o *Option[T]) Insert(val T) *T {
+	*o = Some(val)
+
+	return o.UnwrapAsRef()
+}
+
+// GetOrInsert inserts val in o if o is [None].
+// It subsequently returns a pointer to the value.
+//
+// See [Insert], which updates the value even if the
+// option already contains [Some].
+func (o *Option[T]) GetOrInsert(val T) *T {
+	if o.IsNone() {
+		*o = Some(val)
+	}
+
+	return o.UnwrapAsRef()
+}
+
+// GetOrInsertWith inserts a value returned by fn into o, if o is [None].
+// It subsequently returns a pointer to the value.
+func (o *Option[T]) GetOrInsertWith(fn func() T) *T {
+	if o.IsNone() {
+		*o = Some(fn())
+	}
+
+	return o.UnwrapAsRef()
+}
+
 // Scan implements the [sql.Scanner] interface.
 func (o *Option[T]) Scan(src any) error {
 	// reset first
