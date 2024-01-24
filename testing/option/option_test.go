@@ -135,7 +135,7 @@ var _ = Describe("Option", func() {
 			}
 
 			newOption := option.AndThen(fn)
-			Expect(newOption.IsPresent()).To(BeTrue())
+			Expect(newOption.IsSome()).To(BeTrue())
 			Expect(newOption.UnsafeUnwrap()).To(Equal(10))
 		})
 
@@ -146,7 +146,7 @@ var _ = Describe("Option", func() {
 			}
 
 			newOption := option.AndThen(fn)
-			Expect(newOption.IsPresent()).To(BeFalse())
+			Expect(newOption.IsSome()).To(BeFalse())
 		})
 	})
 
@@ -157,7 +157,7 @@ var _ = Describe("Option", func() {
 
 			result := original.And(opt)
 
-			Expect(result.IsPresent()).To(BeFalse())
+			Expect(result.IsSome()).To(BeFalse())
 		})
 
 		It("should return the provided option when the original option is Some", func() {
@@ -166,7 +166,7 @@ var _ = Describe("Option", func() {
 
 			result := original.And(opt)
 
-			Expect(result.IsPresent()).To(BeTrue())
+			Expect(result.IsSome()).To(BeTrue())
 			Expect(result.Unwrap()).To(Equal("value"))
 		})
 	})
@@ -178,21 +178,21 @@ var _ = Describe("Option", func() {
 			original := typact.None[int]()
 			result := original.Filter(isEven)
 
-			Expect(result.IsPresent()).To(BeFalse())
+			Expect(result.IsSome()).To(BeFalse())
 		})
 
 		It("should return None when the original option is Some but does not satisfy the filter function", func() {
 			original := typact.Some[int](3)
 			result := original.Filter(isEven)
 
-			Expect(result.IsPresent()).To(BeFalse())
+			Expect(result.IsSome()).To(BeFalse())
 		})
 
 		It("should return the original option when it satisfies the filter function", func() {
 			original := typact.Some[int](4)
 			result := original.Filter(isEven)
 
-			Expect(result.IsPresent()).To(BeTrue())
+			Expect(result.IsSome()).To(BeTrue())
 			Expect(result.UnsafeUnwrap()).To(Equal(4))
 		})
 	})
@@ -209,7 +209,7 @@ var _ = Describe("Option", func() {
 			opt := typact.None[string]()
 			result := opt.Map(func(str string) string { return "bar" })
 
-			Expect(result.IsPresent()).To(BeFalse())
+			Expect(result.IsSome()).To(BeFalse())
 		})
 	})
 

@@ -177,6 +177,60 @@ func (o *Option[T]) GetOrInsertWith(fn func() T) *T {
 	return o.UnwrapAsRef()
 }
 
+// Map maps Option[T] to Option[T] by calling fn on the value held by o, if [Some].
+// It returns [Some] with the new value returned by fn.
+// Otherwise [None] will be returned.
+func (o Option[T]) Map(fn func(T) T) Option[T] {
+	if o.IsSome() {
+		return Some(fn(o.UnsafeUnwrap()))
+	}
+
+	return o
+}
+
+// MapOr returns the provided default result (if [None]),
+// or applies fn to the contained value (if [Some]).
+// Otherwise the provided (fallback) value is returned.
+func (o Option[T]) MapOr(fn func(T) T, value T) T {
+	if o.IsSome() {
+		return fn(o.UnsafeUnwrap())
+	}
+
+	return value
+}
+
+// MapOrElse applies the function mapFn to the value held by o if it exists,
+// and returns the result. If o does not hold a value, it applies valueFn and returns its result.
+//
+// This allows conditional transformation of the Option's value or generation of a default value when none is present.
+func (o Option[T]) MapOrElse(mapFn func(T) T, valueFn func() T) T {
+	if o.IsSome() {
+		return mapFn(o.UnsafeUnwrap())
+	}
+
+	return valueFn()
+}
+
+// Filter returns [None] if o is [None], otherwise calls fn with the value of o and returns:
+//   - [None] if fn returns false
+//   - [Some] if fn returns true
+func (o Option[T]) Filter(fn func(T) bool) Option[T] {
+	if o.IsSome() && fn(o.UnsafeUnwrap()) {
+		return o
+	}
+
+	return None[T]()
+}
+
+// Replace replaces o with [Some] of val and returns the old
+// value of o.
+func (o *Option[T]) Replace(val T) Option[T] {
+	old := *o
+	*o = Some(val)
+
+	return old
+}
+
 // And returns [None] if o is [None], otherwise opt is returned.
 func (o Option[T]) And(opt Option[T]) Option[T] {
 	if o.IsSome() {
