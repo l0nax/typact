@@ -1,0 +1,93 @@
+# When using dind, it's wise to use the overlayfs driver for
+# improved performance.
+variables:
+  GO_IMAGE: "golang"
+  GO_VERSION: "v1.21.6-bookworm"
+
+.go-cache:
+  variables:
+    GOPATH: ${CI_PROJECT_DIR}/.go
+  before_script:
+    - mkdir -p .go
+  cache:
+    ## share cache across the same branch
+    key: ${CI_COMMIT_REF_SLUG}
+    policy: pull-push
+    paths:
+      - .go/pkg/mod/
+
+test and coverage:
+  stage: test
+  retry: 2
+  coverage: '/coverage: (\d+.\d+)% of statements/'
+  extends:
+    - .go-cache
+  image: $GO_IMAGE:$GO_VERSION
+  script:
+    ## generate files
+    - export PATH=$PATH:$GOPATH/bin
+    - |
+        ## install dependencies
+        export CUR=$(pwd)
+        export G_OLD=$GOOS
+        export GOOS=linux
+        cd /
+
+        go install github.com/alvaroloes/enumer@latest
+
+        # run tests and generate Coverage report
+        go install github.com/jstemmer/go-junit-report/v2@latest
+        go install github.com/boumenot/gocover-cobertura@latest
+
+        ## go back
+        cd "${CUR}"
+        export GOOS=$G_OLD
+    - |
+      echo "+ Path..: $PATH";
+      echo "+ GoPath: $GOPATH";
+      ls -lah $GOPATH/bin;
+
+      export COVDATA="${CI_PROJECT_DIR}/covdata";
+      export TEST_LOG="${CI_PROJECT_DIR}/unit_test.log";
+      mkdir -p ${COVDATA};
+
+      ## Coverage Data #1: tests directly in the module (units tests, examples, ...)
+      go test -v \
+        -cover \
+        -covermode=atomic \
+        -coverpkg=go.l0nax.org/typact \
+        ./... -args -test.gocoverdir="${COVDATA}" 2>&1 | tee -a "${TEST_LOG}";
+
+      ## Coverage Data #2: unit tests/ integration tests which we placed in another module
+      cd ./testing/option/;
+      go test -v \
+        -cover \
+        -covermode=atomic \
+        -coverpkg=go.l0nax.org/typact \
+        ./... -args -test.gocoverdir="${COVDATA}" 2>&1 | tee -a "${TEST_LOG}";
+      cd ${CI_PROJECT_DIR};
+
+
+      ## Merge Coverage Data
+      cd ${CI_PROJECT_DIR};
+      echo "++++ Finished collecting coverage data: merging";
+      mkdir -p ./coverage;
+      go tool covdata merge -i="${COVDATA}" -o ./coverage;
+
+      # NOTE: Just to log the total percent
+      go tool covdata percent -i ./coverage;
+
+      go tool covdata textfmt -i ./coverage -o ./coverage.txt;
+      rm -rf ./coverage ${COVDATA};
+
+      ## Now we can finally generate our reports
+      echo "++++ Finished merging and processing coverage data: generating reports";
+      gocover-cobertura < ./coverage.txt > coverage.xml;
+
+      cat "${TEST_LOG}" | go-junit-report -set-exit-code > unit-tests.xml
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+      junit: unit-tests.xml
