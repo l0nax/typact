@@ -20,9 +20,6 @@ import (
 //   - unsafe.Pointer: Copied by value as we don't know what's in it.
 //   - chan: A new empty chan is created as we cannot read data inside the old chan.
 //
-// For slices of a struct it is the best to either create a special custom
-// type or use [std.Vector].
-//
 // WARN: If T is not part of the special types above AND not DOES NOT
 // implement [std.Cloner], this method will panic!
 //
@@ -102,7 +99,6 @@ func cloneSlice[T any](val reflect.Value) T {
 
 		return ret.Interface().(T)
 	}
-
 
 	for i := 0; i < elems; i++ {
 		elem := val.Index(i)

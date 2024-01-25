@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"go.l0nax.org/typact"
-	"go.l0nax.org/typact/std"
 )
 
 type SmallStruct struct {
@@ -294,15 +293,6 @@ func BenchmarkOption_Clone(b *testing.B) {
 			"Foo", "Bar",
 			"Hello", "World",
 		})
-
-		for i := 0; i < b.N; i++ {
-			tmp := val.Clone()
-			_ = tmp
-		}
-	})
-
-	b.Run("VectorString", func(b *testing.B) {
-		val := typact.Some(std.VectorFromSlice([]string{"Foo", "Bar", "Hello", "World"}))
 
 		for i := 0; i < b.N; i++ {
 			tmp := val.Clone()
