@@ -1,0 +1,114 @@
+package typact
+
+import (
+	"reflect"
+	"strings"
+	"unsafe"
+
+	"go.l0nax.org/typact/std"
+)
+
+// Clone returns a deep copy of T, if o contains a value.
+// Otherwise [None] is returned.
+//
+// The below special types are handled by the method by simply copying
+// the value:
+//
+//   - Scalar types: all number-like types are copied by value.
+//   - string: Copied by value as string is immutable by design.
+//   - func: Copied by value as func is an opaque pointer at runtime.
+//   - unsafe.Pointer: Copied by value as we don't know what's in it.
+//   - chan: A new empty chan is created as we cannot read data inside the old chan.
+//
+// For slices of a struct it is the best to either create a special custom
+// type or use [std.Vector].
+//
+// WARN: If T is not part of the special types above AND not DOES NOT
+// implement [std.Cloner], this method will panic!
+//
+// BUG: Currently unsupported are slices of struct types!
+func (o Option[T]) Clone() Option[T] {
+	if o.IsNone() {
+		return None[T]()
+	}
+
+	// NOTE: After extensive benchmarking, I found out that
+	// ValueOf is the fastest way to accessing the information.
+	//
+	// Sadly, Go currently does not support type assertion on
+	// generic types.
+	// We might switch to type assertion, once available.
+	refVal := reflect.ValueOf(o.val)
+	kind := refVal.Kind()
+
+	switch {
+	case isScalarCopyable(kind):
+		return Some(o.val)
+	case kind == reflect.String:
+		// XXX: Special case: if [isScalarCopyable] returns false
+		// for a string, it means that we need to explicitly create a copy.
+		srcStr := any(o.val).(string)
+		cpy := strings.Clone(srcStr)
+
+		return Some(any(cpy).(T))
+	case kind == reflect.Slice:
+		return Some(cloneSlice[T](refVal))
+	}
+
+	// NOTE: Converting to any should be last restort because if we use it
+	// with a scalar type, it will create a new allocation just for
+	// the conversion.
+	anyVal := any(o.val)
+
+	vv, ok := anyVal.(std.Cloner[T])
+	if ok {
+		return Some(vv.Clone())
+	}
+
+	panic("unable to clone value: type does not implement std.Cloner interface")
+}
+
+// maxByteSize is a large enough value to cheat Go compiler
+// when converting unsafe address to []byte.
+// It's not actually used in runtime.
+//
+// The value 2^30 is the max value AFAIK to make Go compiler happy on all archs.
+const maxByteSize = 1 << 30
+
+// cloneSlice returns a deep copy of the val slice.
+//
+// NOTE: T represents the slice, not the type of a slice element!
+func cloneSlice[T any](val reflect.Value) T {
+	if val.IsNil() {
+		return zeroValue[T]()
+	}
+
+	valType := val.Type()
+	elems := val.Len()
+	vCap := val.Cap()
+	ret := reflect.MakeSlice(valType, elems, vCap)
+
+	// for scalar slices, we can copy the underlying values directly
+	// => fast path.
+	if isScalarCopyable(valType.Elem().Kind()) {
+		src := unsafe.Pointer(val.Pointer())
+		dst := unsafe.Pointer(ret.Pointer())
+		sz := int(valType.Elem().Size())
+
+		l := elems * sz
+		cc := vCap * sz
+
+		copy((*[maxByteSize]byte)(dst)[:l:cc], (*[maxByteSize]byte)(src)[:l:cc])
+
+		return ret.Interface().(T)
+	}
+
+
+	for i := 0; i < elems; i++ {
+		elem := val.Index(i)
+		vv := elem.Interface().(std.Cloner[T])
+		ret.Index(i).Set(reflect.ValueOf(vv.Clone()))
+	}
+
+	return ret.Interface().(T)
+}

@@ -1,0 +1,3 @@
+// Package features helps to determine which GoLang/ CPU/ ...
+// features are available and which are not.
+package features

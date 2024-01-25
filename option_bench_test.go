@@ -2,8 +2,10 @@ package typact_test
 
 import (
 	"testing"
+	"time"
 
 	"go.l0nax.org/typact"
+	"go.l0nax.org/typact/std"
 )
 
 type SmallStruct struct {
@@ -25,7 +27,6 @@ func BenchmarkOption_GetOrInsert(b *testing.B) {
 	b.ReportAllocs()
 
 	b.Run("None", func(b *testing.B) {
-
 		for i := 0; i < b.N; i++ {
 			opt := typact.None[int]()
 
@@ -232,4 +233,80 @@ func BenchmarkOption_AndThenNone(b *testing.B) {
 		ret := opt.AndThen(fn)
 		_ = ret
 	}
+}
+
+type myData struct {
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+func (m *myData) Clone() *myData {
+	return &myData{
+		CreatedAt: m.CreatedAt,
+		UpdatedAt: m.UpdatedAt,
+	}
+}
+
+func BenchmarkOption_Clone(b *testing.B) {
+	b.ReportAllocs()
+
+	b.Run("None", func(b *testing.B) {
+		val := typact.None[string]()
+
+		for i := 0; i < b.N; i++ {
+			tmp := val.Clone()
+			_ = tmp
+		}
+	})
+
+	b.Run("String", func(b *testing.B) {
+		val := typact.Some("Foo Bar")
+
+		for i := 0; i < b.N; i++ {
+			tmp := val.Clone()
+			_ = tmp
+		}
+	})
+
+	b.Run("Int64", func(b *testing.B) {
+		val := typact.Some(int64(123123))
+
+		for i := 0; i < b.N; i++ {
+			tmp := val.Clone()
+			_ = tmp
+		}
+	})
+
+	b.Run("CustomStructPointer", func(b *testing.B) {
+		val := typact.Some(&myData{
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		})
+
+		for i := 0; i < b.N; i++ {
+			tmp := val.Clone()
+			_ = tmp
+		}
+	})
+
+	b.Run("ScalarSlice", func(b *testing.B) {
+		val := typact.Some([]string{
+			"Foo", "Bar",
+			"Hello", "World",
+		})
+
+		for i := 0; i < b.N; i++ {
+			tmp := val.Clone()
+			_ = tmp
+		}
+	})
+
+	b.Run("VectorString", func(b *testing.B) {
+		val := typact.Some(std.VectorFromSlice([]string{"Foo", "Bar", "Hello", "World"}))
+
+		for i := 0; i < b.N; i++ {
+			tmp := val.Clone()
+			_ = tmp
+		}
+	})
 }
