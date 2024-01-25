@@ -2,6 +2,7 @@ package typact_test
 
 import (
 	"testing"
+	"time"
 
 	"go.l0nax.org/typact"
 )
@@ -232,4 +233,161 @@ func BenchmarkOption_AndThenNone(b *testing.B) {
 		ret := opt.AndThen(fn)
 		_ = ret
 	}
+}
+
+type copyImpl string
+
+func (c copyImpl) Copy() copyImpl {
+	return c
+}
+
+func BenchmarkOption_Copy(b *testing.B) {
+	b.Run("Copy", func(b *testing.B) {
+		dat := typact.Some(copyImpl("Foo Bar"))
+
+		for i := 0; i < b.N; i++ {
+			tmp := dat.Copy()
+			_ = tmp
+		}
+	})
+
+	b.Run("NotImpl", func(b *testing.B) {
+		dat := typact.Some("Foo Bar")
+
+		for i := 0; i < b.N; i++ {
+			tmp := dat.Copy()
+			_ = tmp
+		}
+	})
+}
+
+func BenchmarkOption_CopyAnyNew(b *testing.B) {
+	b.Run("Copy", func(b *testing.B) {
+		dat := typact.Some(copyImpl("Foo Bar"))
+
+		for i := 0; i < b.N; i++ {
+			tmp := dat.NewCopy()
+			_ = tmp
+		}
+	})
+
+	b.Run("NotImpl", func(b *testing.B) {
+		dat := typact.Some("Foo Bar")
+
+		for i := 0; i < b.N; i++ {
+			tmp := dat.NewCopy()
+			_ = tmp
+		}
+	})
+}
+
+func BenchmarkOption_CopyAnyNew_myData(b *testing.B) {
+	b.Run("Ptr", func(b *testing.B) {
+		dat := typact.Some(&myData{
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		})
+
+		for i := 0; i < b.N; i++ {
+			tmp := dat.NewCopy()
+			_ = tmp
+		}
+	})
+
+	b.Run("NoPtr", func(b *testing.B) {
+		dat := typact.Some(myDataNoPtr{
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		})
+
+		for i := 0; i < b.N; i++ {
+			tmp := dat.NewCopy()
+			_ = tmp
+		}
+	})
+}
+
+func BenchmarkOption_CopyAny(b *testing.B) {
+	b.Run("Copy", func(b *testing.B) {
+		dat := typact.Some(copyImpl("Foo Bar"))
+
+		for i := 0; i < b.N; i++ {
+			tmp := dat.CopyAny()
+			_ = tmp
+		}
+	})
+
+	b.Run("NotImpl", func(b *testing.B) {
+		dat := typact.Some("Foo Bar")
+
+		for i := 0; i < b.N; i++ {
+			tmp := dat.CopyAny()
+			_ = tmp
+		}
+	})
+}
+
+func BenchmarkReflectIsScalar(b *testing.B) {
+	val := typact.Some("Foo Bar")
+
+	b.Run("ValueOf", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			ret := val.IS_ValueOf()
+			_ = ret
+		}
+	})
+
+	b.Run("TypeFrom", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			ret := val.IS_TypeFrom()
+			_ = ret
+		}
+	})
+}
+
+type myDataNoPtr struct {
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+func (m myDataNoPtr) Copy() myDataNoPtr {
+	return myDataNoPtr{
+		CreatedAt: m.CreatedAt,
+		UpdatedAt: m.UpdatedAt,
+	}
+}
+
+type myData struct {
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+func (m *myData) Copy() *myData {
+	md := &myData{
+		CreatedAt: m.CreatedAt,
+		UpdatedAt: m.UpdatedAt,
+	}
+
+	return md
+}
+
+func BenchmarkReflectIsScalar_Ptr(b *testing.B) {
+	val := typact.Some(&myData{
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	})
+
+	b.Run("ValueOf", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			ret := val.IS_ValueOf()
+			_ = ret
+		}
+	})
+
+	b.Run("TypeFrom", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			ret := val.IS_TypeFrom()
+			_ = ret
+		}
+	})
 }

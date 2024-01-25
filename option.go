@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
+	"unsafe"
 )
 
 // Option represents an optional value.
@@ -348,4 +350,131 @@ func (o Option[T]) MarshalText() ([]byte, error) {
 // It expects JSON as input.
 func (o *Option[T]) UnmarshalText(data []byte) error {
 	return json.Unmarshal(data, o)
+}
+
+type copy[T any] interface {
+	Copy() T
+}
+
+func (o Option[T]) Copy() Option[T] {
+	if o.IsNone() {
+		return None[T]()
+	}
+
+	refVal := reflect.ValueOf(o.val)
+
+	copyType := reflect.TypeFor[copy[T]]()
+	if refVal.Type().Implements(copyType) {
+		vv := refVal.Interface().(copy[T]).Copy()
+		return Some(vv)
+	}
+
+	if IsScalar(refVal.Kind()) {
+		vv := copyScalarValue(refVal).Interface().(T)
+		return Some(vv)
+	}
+
+	panic("X")
+
+	return None[T]()
+}
+
+func (o Option[T]) IS_ValueOf() bool {
+	if o.IsNone() {
+		return false
+	}
+
+	val := reflect.ValueOf(o.val)
+	return IsScalar(val.Kind())
+}
+
+func (o Option[T]) IS_TypeFrom() bool {
+	if o.IsNone() {
+		return false
+	}
+
+	tt := reflect.TypeFor[T]()
+	return IsScalar(tt.Kind())
+}
+
+func IsScalar(k reflect.Kind) bool {
+	switch k {
+	case reflect.Bool,
+		reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr,
+		reflect.Float32, reflect.Float64,
+		reflect.Complex64, reflect.Complex128,
+		reflect.Func,
+		reflect.UnsafePointer,
+		reflect.Invalid:
+		return true
+
+	case reflect.String:
+		// If arena is not enabled, string can be copied as scalar safely
+		// as it's immutable by design.
+		return true
+		//return !arenaIsEnabled
+	}
+
+	return false
+}
+
+func copyScalarValue(src reflect.Value) reflect.Value {
+	if src.CanInterface() {
+		return src
+	}
+
+	dst := newScalarValue(src)
+	return dst.Convert(src.Type())
+}
+
+func newScalarValue(src reflect.Value) reflect.Value {
+	// src is an unexported field value. Copy its value.
+	switch src.Kind() {
+	case reflect.Bool:
+		return reflect.ValueOf(src.Bool())
+
+	case reflect.Int:
+		return reflect.ValueOf(int(src.Int()))
+	case reflect.Int8:
+		return reflect.ValueOf(int8(src.Int()))
+	case reflect.Int16:
+		return reflect.ValueOf(int16(src.Int()))
+	case reflect.Int32:
+		return reflect.ValueOf(int32(src.Int()))
+	case reflect.Int64:
+		return reflect.ValueOf(src.Int())
+
+	case reflect.Uint:
+		return reflect.ValueOf(uint(src.Uint()))
+	case reflect.Uint8:
+		return reflect.ValueOf(uint8(src.Uint()))
+	case reflect.Uint16:
+		return reflect.ValueOf(uint16(src.Uint()))
+	case reflect.Uint32:
+		return reflect.ValueOf(uint32(src.Uint()))
+	case reflect.Uint64:
+		return reflect.ValueOf(src.Uint())
+	case reflect.Uintptr:
+		return reflect.ValueOf(uintptr(src.Uint()))
+
+	case reflect.Float32:
+		return reflect.ValueOf(float32(src.Float()))
+	case reflect.Float64:
+		return reflect.ValueOf(src.Float())
+
+	case reflect.Complex64:
+		return reflect.ValueOf(complex64(src.Complex()))
+	case reflect.Complex128:
+		return reflect.ValueOf(src.Complex())
+
+	case reflect.String:
+		return reflect.ValueOf(src.String())
+	case reflect.Func:
+		panic("func")
+	case reflect.UnsafePointer:
+		return reflect.ValueOf(unsafe.Pointer(src.Pointer()))
+	}
+
+	panic(fmt.Errorf("go-clone: <bug> impossible type `%v` when cloning private field", src.Type()))
 }
