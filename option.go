@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"database/sql/driver"
 	"encoding/json"
-	"errors"
 	"fmt"
 )
 
@@ -288,7 +287,8 @@ func (o *Option[T]) Scan(src any) error {
 		// this overrides any previously defined value in the field.
 		o.val = zeroValue[T]()
 
-		return errors.New("unable to scan Option[T]")
+		// TODO(l0nax): Wrap the returned error and return it!
+		return err
 	}
 
 	if v, ok := av.(T); ok {
@@ -330,6 +330,7 @@ func (o *Option[T]) UnmarshalJSON(data []byte) error {
 		// only allocate in slow path
 		o.val = zeroValue[T]()
 
+		// TODO(l0nax): Wrap the returned error and return it!
 		return err
 	}
 
