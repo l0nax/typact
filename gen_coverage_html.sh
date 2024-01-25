@@ -5,6 +5,7 @@ set -o nounset  # abort on unbound variable
 set -o pipefail # don't hide errors within pipes
 
 export COVDATA="$(pwd)/covdata"
+export COVERPKG="go.l0nax.org/typact,go.l0nax.org/typact/std,go.l0nax.org/typact/std/option"
 
 mkdir -p ${COVDATA}
 mkdir -p $(pwd)/coverage
@@ -12,7 +13,7 @@ mkdir -p $(pwd)/coverage
 go test -v \
   -cover \
   -covermode=atomic \
-  -coverpkg=go.l0nax.org/typact \
+  -coverpkg=${COVERPKG} \
   ./... -args -test.gocoverdir="${COVDATA}"
 
 (
@@ -20,7 +21,25 @@ go test -v \
   go test -v \
     -cover \
     -covermode=atomic \
-    -coverpkg=go.l0nax.org/typact \
+    -coverpkg=${COVERPKG} \
+    ./... -args -test.gocoverdir="${COVDATA}"
+)
+
+(
+  cd ./std/option
+  go test -v \
+    -cover \
+    -covermode=atomic \
+    -coverpkg=${COVERPKG} \
+    ./... -args -test.gocoverdir="${COVDATA}"
+)
+
+(
+  cd ./std
+  go test -v \
+    -cover \
+    -covermode=atomic \
+    -coverpkg=${COVERPKG} \
     ./... -args -test.gocoverdir="${COVDATA}"
 )
 
