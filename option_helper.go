@@ -23,7 +23,7 @@ import (
 // WARN: If T is not part of the special types above AND not DOES NOT
 // implement [std.Cloner], this method will panic!
 //
-// BUG: Currently unsupported are slices of struct types!
+// BUG: Currently unsupported are arrays of any type.
 func (o Option[T]) Clone() Option[T] {
 	if o.IsNone() {
 		return None[T]()
@@ -49,7 +49,7 @@ func (o Option[T]) Clone() Option[T] {
 
 		return Some(any(cpy).(T))
 	case kind == reflect.Slice:
-		return Some(cloneSlice[T](refVal))
+		return Some(cloneSlice[T](o.UnsafeUnwrap(), refVal))
 	}
 
 	// NOTE: Converting to any should be last restort because if we use it
@@ -75,7 +75,7 @@ const maxByteSize = 1 << 30
 // cloneSlice returns a deep copy of the val slice.
 //
 // NOTE: T represents the slice, not the type of a slice element!
-func cloneSlice[T any](val reflect.Value) T {
+func cloneSlice[T any](raw T, val reflect.Value) T {
 	if val.IsNil() {
 		return zeroValue[T]()
 	}
@@ -83,11 +83,11 @@ func cloneSlice[T any](val reflect.Value) T {
 	valType := val.Type()
 	elems := val.Len()
 	vCap := val.Cap()
-	ret := reflect.MakeSlice(valType, elems, vCap)
 
 	// for scalar slices, we can copy the underlying values directly
 	// => fast path.
 	if isScalarCopyable(valType.Elem().Kind()) {
+		ret := reflect.MakeSlice(valType, elems, vCap)
 		src := unsafe.Pointer(val.Pointer())
 		dst := unsafe.Pointer(ret.Pointer())
 		sz := int(valType.Elem().Size())
@@ -100,6 +100,18 @@ func cloneSlice[T any](val reflect.Value) T {
 		return ret.Interface().(T)
 	}
 
+	// fast path check if T implements std.Cloner.
+	// We can convert to any here because we know that the element of T
+	// is not a scalar thus we are not creating an unnecessary allocation.
+	vv, ok := any(raw).(std.Cloner[T])
+	if ok {
+		return vv.Clone()
+	}
+
+	ret := reflect.MakeSlice(valType, elems, vCap)
+
+	// The caller did not implement a helper type, thus
+	// we have to manually clone the elements one by one.
 	for i := 0; i < elems; i++ {
 		elem := val.Index(i)
 		vv := elem.Interface().(std.Cloner[T])
