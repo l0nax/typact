@@ -29,6 +29,10 @@ func (o Option[T]) Clone() Option[T] {
 		return None[T]()
 	}
 
+	if isScalar[T]() {
+		return Some(o.val)
+	}
+
 	// NOTE: After extensive benchmarking, I found out that
 	// ValueOf is the fastest way to accessing the information.
 	//
@@ -119,4 +123,20 @@ func cloneSlice[T any](raw T, val reflect.Value) T {
 	}
 
 	return ret.Interface().(T)
+}
+
+func isScalar[T any]() bool {
+	var v T
+
+	switch any(v).(type) {
+	case int, int8, int16, int32, int64,
+		uint, uint8, uint16, uint32, uint64,
+		float32, float64,
+		complex64, complex128,
+		bool,
+		string:
+		return true
+	}
+
+	return false
 }
