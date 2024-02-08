@@ -136,6 +136,16 @@ func BenchmarkOption_Unwrap(b *testing.B) {
 	}
 }
 
+func BenchmarkOption_Expect(b *testing.B) {
+	b.ReportAllocs()
+
+	vv := getSomeStr()
+	for i := 0; i < b.N; i++ {
+		str := vv.Expect("my string")
+		_ = str
+	}
+}
+
 func BenchmarkOption_UnwrapOr(b *testing.B) {
 	b.ReportAllocs()
 

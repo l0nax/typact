@@ -79,6 +79,18 @@ func (o Option[T]) UnsafeUnwrap() T {
 	return o.val
 }
 
+// Expect returns the contained value of o, if it is present.
+// Otherwise it panics with msg.
+//
+//gcassert:inline
+func (o Option[T]) Expect(msg string) T {
+	if o.IsSome() {
+		return o.UnsafeUnwrap()
+	}
+
+	panic(msg)
+}
+
 // Unwrap returns the value or panics if it is
 // not present.
 //
