@@ -1,5 +1,6 @@
 # typact
 
+[![Go Report Card](https://goreportcard.com/badge/go.l0nax.org/typact)](https://goreportcard.com/report/go.l0nax.org/typact)
 [![Godoc Reference](https://pkg.go.dev/badge/go.l0nax.org/typact.svg)](https://pkg.go.dev/go.l0nax.org/typact)
 [![Latest Release](https://gitlab.com/l0nax/typact/-/badges/release.svg)](https://gitlab.com/l0nax/typact/-/releases)
 [![Coverage](https://gitlab.com/l0nax/typact/badges/master/coverage.svg)](https://gitlab.com/l0nax/typact/-/commits/master)
