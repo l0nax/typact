@@ -2,6 +2,7 @@ package typact
 
 import (
 	"bytes"
+	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
@@ -287,7 +288,27 @@ func (o Option[T]) OrElse(valueFn func() Option[T]) Option[T] {
 	return valueFn()
 }
 
+// Value implements the [driver.Valuer] interface.
+// It returns NULL if o is [None], otherwise it
+// returns the value of o.
+//
+// If T implements the [driver.Valuer] interface, the method
+// will be called instead.
+func (o Option[T]) Value() (driver.Value, error) {
+	if o.IsNone() {
+		return nil, nil
+	}
+
+	if implementsDriverValuer[T]() {
+		return any(o.val).(driver.Valuer).Value()
+	}
+
+	return driver.DefaultParameterConverter.ConvertValue(o.val)
+}
+
 // Scan implements the [sql.Scanner] interface.
+//
+// If *T implements [sql.Scanner], the custom method will be called.
 func (o *Option[T]) Scan(src any) error {
 	// reset first
 	o.some = false
@@ -300,6 +321,19 @@ func (o *Option[T]) Scan(src any) error {
 		return nil
 	}
 
+	if implementsSQLScanner[T]() {
+		// TODO(l0nax): Add tests to check if override works!
+		// we first ensure to set o.val to the zero value, just in case
+		o.val = zeroValue[T]()
+
+		scanner := any(&o.val).(sql.Scanner)
+
+		err := scanner.Scan(src)
+		o.some = err == nil
+
+		return err
+	}
+
 	av, err := driver.DefaultParameterConverter.ConvertValue(src)
 	if err != nil {
 		// only allocate in slow path
@@ -310,16 +344,33 @@ func (o *Option[T]) Scan(src any) error {
 		return err
 	}
 
-	if v, ok := av.(T); ok {
-		o.some = true
-		o.val = v
-	} else {
+	v, ok := av.(T)
+	if !ok {
 		// explicitly copy src to prevent heap escape.
 		tmp := src
 		return fmt.Errorf("got unexpected type %T", tmp)
 	}
 
+	o.some = true
+	o.val = v
+
 	return nil
+}
+
+// implementsSqlScanner returns true if the pointer of T implements [sql.Scanner].
+func implementsSQLScanner[T any]() bool {
+	var zero *T
+
+	_, ok := any(zero).(sql.Scanner)
+	return ok
+}
+
+// implementsDriverValuer returns true if T implements [driver.Valuer].
+func implementsDriverValuer[T any]() bool {
+	var zero T
+
+	_, ok := any(&zero).(driver.Valuer)
+	return ok
 }
 
 // UnmarshalJSON implements the [json.Marshaler] interface.
