@@ -2,6 +2,7 @@ package option_test
 
 import (
 	"encoding/json"
+	"fmt"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -9,6 +10,34 @@ import (
 )
 
 var _ = Describe("Option", func() {
+	Describe("Create a value", func() {
+		It("should return Some with Wrap(T, true)", func() {
+			vv := typact.Wrap("foo bar", true)
+			Expect(vv.IsSome()).To(BeTrue())
+			Expect(vv.Unwrap()).To(BeEquivalentTo("foo bar"))
+		})
+
+		It("should return None with Wrap(T, false)", func() {
+			vv := typact.Wrap("foo bar", false)
+			Expect(vv.IsNone()).To(BeTrue())
+		})
+
+		It("should return Some with TryWrap(true)", func() {
+			vv := typact.TryWrap(func() (string, bool) {
+				return "foo bar", true
+			})
+			Expect(vv.IsSome()).To(BeTrue())
+			Expect(vv.Unwrap()).To(BeEquivalentTo("foo bar"))
+		})
+
+		It("should returnn None with TryWrap(false)", func() {
+			vv := typact.TryWrap(func() (string, bool) {
+				return "foo bar", false
+			})
+			Expect(vv.IsNone()).To(BeTrue())
+		})
+	})
+
 	Describe("UnwrapAsRef", func() {
 		It("with string", func() {
 			val := typact.Some("this is my option")
@@ -73,6 +102,37 @@ var _ = Describe("Option", func() {
 		})
 	})
 
+	Describe("IsSomeAnd", func() {
+		It("should return true if fn returns true and is Some", func() {
+			val := typact.Some("foo bar")
+			ret := val.IsSomeAnd(func(s string) bool {
+				return s == "foo bar"
+			})
+
+			Expect(ret).To(BeTrue())
+		})
+
+		It("should return false and not call fn if is None", func() {
+			val := typact.None[string]()
+			ret := val.IsSomeAnd(func(s string) bool {
+				Fail("fn should not be called")
+
+				return true
+			})
+
+			Expect(ret).To(BeFalse())
+		})
+
+		It("should return false if fn returns false and is Some", func() {
+			val := typact.Some("foo bar")
+			ret := val.IsSomeAnd(func(s string) bool {
+				return false
+			})
+
+			Expect(ret).To(BeFalse())
+		})
+	})
+
 	Describe("Or", func() {
 		It("when first is Some and second is Some", func() {
 			val := typact.Some("this is my option")
@@ -108,6 +168,22 @@ var _ = Describe("Option", func() {
 			newVal := val.Or(other)
 
 			Expect(newVal.IsNone()).To(BeTrue())
+		})
+	})
+
+	Describe("Expect", func() {
+		It("should return the value", func() {
+			x := typact.Some(5)
+			Expect(x.Expect("a value")).To(Equal(5))
+		})
+
+		It("should panic", func() {
+			x := typact.None[int]()
+			Expect(
+				func() {
+					x.Expect("no value")
+				}).
+				To(Panic())
 		})
 	})
 
@@ -477,4 +553,98 @@ var _ = Describe("Option", func() {
 			})
 		})
 	})
+
+	Describe("Database Scan/Value", func() {
+		DescribeTable("Scanning on string should work",
+			func(inputValue any, wantErr bool, isSome bool) {
+				var vv typact.Option[string]
+
+				err := vv.Scan(inputValue)
+				if wantErr {
+					Expect(err).To(HaveOccurred())
+				} else {
+					Expect(err).ToNot(HaveOccurred())
+
+					if isSome {
+						Expect(vv.IsSome()).To(BeTrue())
+						Expect(vv.Unwrap()).To(BeEquivalentTo(inputValue))
+					} else {
+						Expect(vv.IsNone()).To(BeTrue())
+					}
+				}
+			},
+			Entry("normal string input", "foo bar", false, true),
+			Entry("null input", nil, false, false),
+			Entry("byte slice as input", []byte("hello world"), true, false),
+			Entry("complete other type", 555, true, false),
+		)
+
+		Context("Scan on unsupported type", func() {
+			It("should error on non-null input", func() {
+				var vv typact.Option[func()]
+
+				err := vv.Scan("foo")
+				Expect(err).To(HaveOccurred())
+				Expect(vv.IsNone()).To(BeTrue())
+			})
+
+			// NOTE: This is the same behavior as the [database/sql.Null] type!
+			It("should not error on null input", func() {
+				var vv typact.Option[func()]
+
+				err := vv.Scan(nil)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(vv.IsNone()).To(BeTrue())
+			})
+
+			It("should handle errors of custom scanner", func() {
+				var vv typact.Option[errScanner]
+
+				err := vv.Scan("foo")
+				Expect(err).To(HaveOccurred())
+				Expect(err).To(MatchError(ContainSubstring("never scan")))
+				Expect(vv.IsNone()).To(BeTrue())
+			})
+
+			It("should call the custom scanner implementation", func() {
+				var vv typact.Option[customScanner]
+
+				err := vv.Scan("foo")
+				Expect(err).ToNot(HaveOccurred())
+				Expect(vv.IsSome()).To(BeTrue())
+				Expect(vv.Unwrap()).To(Equal(customScanner{Data: "custom: foo"}))
+			})
+
+			It("should override existing values", func() {
+				vv := typact.Some(customScanner{Data: "start"})
+
+				err := vv.Scan("foo")
+				Expect(err).ToNot(HaveOccurred())
+				Expect(vv.IsSome()).To(BeTrue())
+				Expect(vv.Unwrap()).To(Equal(customScanner{Data: "custom: foo"}))
+			})
+		})
+	})
 })
+
+type errScanner struct {
+	Data string
+}
+
+func (s *errScanner) Scan(val any) error {
+	return fmt.Errorf("never scan")
+}
+
+type customScanner struct {
+	Data string
+}
+
+func (c *customScanner) Scan(val any) error {
+	switch v := val.(type) {
+	case string:
+		c.Data = "custom: " + v
+		return nil
+	}
+
+	return fmt.Errorf("unsupported type %T", val)
+}

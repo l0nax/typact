@@ -1,7 +1,9 @@
 package typact_test
 
 import (
+	"os"
 	"testing"
+	"time"
 
 	"go.l0nax.org/typact"
 )
@@ -25,7 +27,6 @@ func BenchmarkOption_GetOrInsert(b *testing.B) {
 	b.ReportAllocs()
 
 	b.Run("None", func(b *testing.B) {
-
 		for i := 0; i < b.N; i++ {
 			opt := typact.None[int]()
 
@@ -115,6 +116,121 @@ func BenchmarkOption_OrElseAndThenNone(b *testing.B) {
 				return typact.Some(sw)
 			})
 	}
+}
+
+func getSomeStr() typact.Option[string] {
+	if os.Getenv("NOT_EXISTING") == "" {
+		return typact.Some("Foo")
+	}
+
+	return typact.None[string]()
+}
+
+func getNoneStr() typact.Option[string] {
+	if os.Getenv("NOT_EXISTING") != "" {
+		return typact.Some("Foo")
+	}
+
+	return typact.None[string]()
+}
+
+func BenchmarkOption_Unwrap(b *testing.B) {
+	b.ReportAllocs()
+
+	vv := getSomeStr()
+	for i := 0; i < b.N; i++ {
+		str := vv.Unwrap()
+		_ = str
+	}
+}
+
+func BenchmarkOption_Expect(b *testing.B) {
+	b.ReportAllocs()
+
+	vv := getSomeStr()
+	for i := 0; i < b.N; i++ {
+		str := vv.Expect("my string")
+		_ = str
+	}
+}
+
+func BenchmarkOption_IsSomeAnd(b *testing.B) {
+	b.ReportAllocs()
+
+	b.Run("Some", func(b *testing.B) {
+		vv := getSomeStr()
+
+		for i := 0; i < b.N; i++ {
+			ok := vv.IsSomeAnd(func(str string) bool {
+				return str == "Foo"
+			})
+
+			_ = ok
+		}
+	})
+
+	b.Run("None", func(b *testing.B) {
+		vv := getNoneStr()
+
+		for i := 0; i < b.N; i++ {
+			ok := vv.IsSomeAnd(func(str string) bool {
+				return str == "Foo"
+			})
+
+			_ = ok
+		}
+	})
+
+	b.Run("Some_Slice", func(b *testing.B) {
+		var vv typact.Option[[]string]
+		if os.Getenv("NOT_EXISTING") == "" {
+			vv = typact.Some([]string{
+				"Hello", "World", "Foo", "Bar",
+				"Test", "Something", "Home",
+			})
+		}
+
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			isLongEnough := vv.IsSomeAnd(func(strs []string) bool {
+				n := 0
+				for i := range strs {
+					n += len(strs[i])
+				}
+
+				return n > 100
+			})
+			_ = isLongEnough
+		}
+	})
+}
+
+func BenchmarkOption_UnwrapOr(b *testing.B) {
+	b.ReportAllocs()
+
+	b.Run("Native", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			var str string
+			if str == "" {
+				str = "My String"
+			}
+
+			_ = str
+		}
+	})
+
+	b.Run("Some", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			str := typact.Some("Foo").UnwrapOr("Bar")
+			_ = str
+		}
+	})
+
+	b.Run("None", func(b *testing.B) {
+		str := typact.None[string]().UnwrapOr("Bar")
+		_ = str
+	})
 }
 
 func BenchmarkOption_UnwrapOrSome(b *testing.B) {
@@ -232,4 +348,71 @@ func BenchmarkOption_AndThenNone(b *testing.B) {
 		ret := opt.AndThen(fn)
 		_ = ret
 	}
+}
+
+type myData struct {
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+func (m *myData) Clone() *myData {
+	return &myData{
+		CreatedAt: m.CreatedAt,
+		UpdatedAt: m.UpdatedAt,
+	}
+}
+
+func BenchmarkOption_Clone(b *testing.B) {
+	b.ReportAllocs()
+
+	b.Run("None", func(b *testing.B) {
+		val := typact.None[string]()
+
+		for i := 0; i < b.N; i++ {
+			tmp := val.Clone()
+			_ = tmp
+		}
+	})
+
+	b.Run("String", func(b *testing.B) {
+		val := typact.Some("Foo Bar")
+
+		for i := 0; i < b.N; i++ {
+			tmp := val.Clone()
+			_ = tmp
+		}
+	})
+
+	b.Run("Int64", func(b *testing.B) {
+		val := typact.Some(int64(123123))
+
+		for i := 0; i < b.N; i++ {
+			tmp := val.Clone()
+			_ = tmp
+		}
+	})
+
+	b.Run("CustomStructPointer", func(b *testing.B) {
+		val := typact.Some(&myData{
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		})
+
+		for i := 0; i < b.N; i++ {
+			tmp := val.Clone()
+			_ = tmp
+		}
+	})
+
+	b.Run("ScalarSlice", func(b *testing.B) {
+		val := typact.Some([]string{
+			"Foo", "Bar",
+			"Hello", "World",
+		})
+
+		for i := 0; i < b.N; i++ {
+			tmp := val.Clone()
+			_ = tmp
+		}
+	})
 }

@@ -2,6 +2,7 @@ package typact_test
 
 import (
 	"fmt"
+	"slices"
 
 	"go.l0nax.org/typact"
 )
@@ -97,4 +98,59 @@ func ExampleOption_GetOrInsertWith() {
 	// Output:
 	// 2
 	// 20
+}
+
+func ExampleOption_IsSomeAnd() {
+	x := typact.Some("foo")
+
+	ok := x.IsSomeAnd(func(str string) bool {
+		return str == "foo"
+	})
+	fmt.Printf("%t\n", ok)
+
+	ok = x.IsSomeAnd(func(str string) bool {
+		return str == ""
+	})
+	fmt.Printf("%t\n", ok)
+
+	y := typact.None[string]()
+	ok = y.IsSomeAnd(func(str string) bool {
+		return str != ""
+	})
+	fmt.Printf("%t\n", ok)
+
+	// Output:
+	// true
+	// false
+	// false
+}
+
+func ExampleOption_Filter_slice() {
+	x := []typact.Option[string]{
+		typact.Some("foo"),
+		typact.None[string](),
+		typact.Some("bar"),
+		typact.Some("baz"),
+		typact.None[string](),
+		typact.Some("hello"),
+		typact.Some("world"),
+	}
+
+	x = slices.DeleteFunc(x, func(val typact.Option[string]) bool {
+		return !val.IsSomeAnd(IsNotZero[string])
+	})
+	fmt.Println(x)
+
+	// Output:
+	// [{foo true} {bar true} {baz true} {hello true} {world true}]
+}
+
+func IsZero[T comparable](val T) bool {
+	var zero T
+	return val == zero
+}
+
+func IsNotZero[T comparable](val T) bool {
+	var zero T
+	return val != zero
 }
