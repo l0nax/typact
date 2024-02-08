@@ -1,6 +1,7 @@
 package typact_test
 
 import (
+	"os"
 	"testing"
 	"time"
 
@@ -115,6 +116,51 @@ func BenchmarkOption_OrElseAndThenNone(b *testing.B) {
 				return typact.Some(sw)
 			})
 	}
+}
+
+func getSomeStr() typact.Option[string] {
+	if os.Getenv("NOT_EXISTING") == "" {
+		return typact.Some("Foo")
+	}
+
+	return typact.None[string]()
+}
+
+func BenchmarkOption_Unwrap(b *testing.B) {
+	b.ReportAllocs()
+
+	vv := getSomeStr()
+	for i := 0; i < b.N; i++ {
+		str := vv.Unwrap()
+		_ = str
+	}
+}
+
+func BenchmarkOption_UnwrapOr(b *testing.B) {
+	b.ReportAllocs()
+
+	b.Run("Native", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			var str string
+			if str == "" {
+				str = "My String"
+			}
+
+			_ = str
+		}
+	})
+
+	b.Run("Some", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			str := typact.Some("Foo").UnwrapOr("Bar")
+			_ = str
+		}
+	})
+
+	b.Run("None", func(b *testing.B) {
+		str := typact.None[string]().UnwrapOr("Bar")
+		_ = str
+	})
 }
 
 func BenchmarkOption_UnwrapOrSome(b *testing.B) {
