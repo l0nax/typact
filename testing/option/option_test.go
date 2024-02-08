@@ -10,6 +10,34 @@ import (
 )
 
 var _ = Describe("Option", func() {
+	Describe("Create a value", func() {
+		It("should return Some with Wrap(T, true)", func() {
+			vv := typact.Wrap("foo bar", true)
+			Expect(vv.IsSome()).To(BeTrue())
+			Expect(vv.Unwrap()).To(BeEquivalentTo("foo bar"))
+		})
+
+		It("should return None with Wrap(T, false)", func() {
+			vv := typact.Wrap("foo bar", false)
+			Expect(vv.IsNone()).To(BeTrue())
+		})
+
+		It("should return Some with TryWrap(true)", func() {
+			vv := typact.TryWrap(func() (string, bool) {
+				return "foo bar", true
+			})
+			Expect(vv.IsSome()).To(BeTrue())
+			Expect(vv.Unwrap()).To(BeEquivalentTo("foo bar"))
+		})
+
+		It("should returnn None with TryWrap(false)", func() {
+			vv := typact.TryWrap(func() (string, bool) {
+				return "foo bar", false
+			})
+			Expect(vv.IsNone()).To(BeTrue())
+		})
+	})
+
 	Describe("UnwrapAsRef", func() {
 		It("with string", func() {
 			val := typact.Some("this is my option")
@@ -140,6 +168,22 @@ var _ = Describe("Option", func() {
 			newVal := val.Or(other)
 
 			Expect(newVal.IsNone()).To(BeTrue())
+		})
+	})
+
+	Describe("Expect", func() {
+		It("should return the value", func() {
+			x := typact.Some(5)
+			Expect(x.Expect("a value")).To(Equal(5))
+		})
+
+		It("should panic", func() {
+			x := typact.None[int]()
+			Expect(
+				func() {
+					x.Expect("no value")
+				}).
+				To(Panic())
 		})
 	})
 
