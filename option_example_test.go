@@ -137,12 +137,12 @@ func ExampleOption_Filter_slice() {
 	}
 
 	x = slices.DeleteFunc(x, func(val typact.Option[string]) bool {
-		return val.IsSomeAnd(IsNotZero[string])
+		return !val.IsSomeAnd(IsNotZero[string])
 	})
 	fmt.Println(x)
 
 	// Output:
-	// [foo bar baz hello world]
+	// [{foo true} {bar true} {baz true} {hello true} {world true}]
 }
 
 func IsZero[T comparable](val T) bool {

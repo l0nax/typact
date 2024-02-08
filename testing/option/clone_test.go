@@ -1,6 +1,8 @@
 package option_test
 
 import (
+	"time"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.l0nax.org/typact"
@@ -90,6 +92,19 @@ var _ = Describe("Clone", func() {
 			Expect(cpy).To(BeEquivalentTo("cpy: foo bar"))
 		})
 
+		It("should NOT use the custom Clone method on pointer", func() {
+			data := myStrWithClone("foo bar")
+			vv := typact.Some(&data)
+			cpy := vv.Clone().Unwrap()
+
+			// NOTE: It is not directly possible to call the custom Clone[T] method
+			// and since [myStrWithClone] implements the [std.Clone] interface only
+			// for the non-pointer variant, it should fallback to our implementation.
+			//
+			// If someone wants to support this specific usecase, please create an issue.
+			Expect(*cpy).To(BeEquivalentTo("foo bar"))
+		})
+
 		It("should clone an alias to primitive type", func() {
 			vv := typact.Some(myStrAlias("foo bar"))
 			cpy := vv.Clone().Unwrap()
@@ -129,6 +144,47 @@ var _ = Describe("Clone", func() {
 			Expect(cpy).To(BeEquivalentTo(myStrSlice([]string{"cpy: foo", "cpy: bar"})))
 		})
 	})
+
+	Describe("clone custom structs", func() {
+		It("should clone the custom method", func() {
+			tt := time.Now()
+
+			vv := typact.Some(myStruct{
+				CreatedAt: tt,
+				Data:      "foo bar",
+			})
+			cpy := vv.Clone().Unwrap()
+
+			// change vv
+			vv.UnwrapAsRef().CreatedAt = tt.AddDate(0, 0, 1)
+
+			Expect(cpy).To(BeEquivalentTo(myStruct{
+				CreatedAt: tt,
+				Data:      "foo bar",
+			}))
+		})
+
+		/*
+			// XXX: This will/ must panic!
+					It("should call the custom Clone method on ptr ref", func() {
+						tt := time.Now()
+
+						vv := typact.Some(&myStruct{
+							CreatedAt: tt,
+							Data:      "foo bar",
+						})
+						cpy := vv.Clone().Unwrap()
+
+						// change vv
+						vv.Unwrap().CreatedAt = tt.AddDate(0, 0, 1)
+
+						Expect(*cpy).To(BeEquivalentTo(myStruct{
+							CreatedAt: tt,
+							Data:      "foo bar",
+						}))
+					})
+		*/
+	})
 })
 
 type myStrSliceAlias = []string
@@ -156,4 +212,16 @@ func (m myStrWithClone) Clone() myStrWithClone {
 
 func toPtr[T any](val T) *T {
 	return &val
+}
+
+type myStruct struct {
+	CreatedAt time.Time
+	Data      string
+}
+
+func (m myStruct) Clone() myStruct {
+	return myStruct{
+		CreatedAt: m.CreatedAt,
+		Data:      m.Data,
+	}
 }
