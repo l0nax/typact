@@ -73,6 +73,37 @@ var _ = Describe("Option", func() {
 		})
 	})
 
+	Describe("IsSomeAnd", func() {
+		It("should return true if fn returns true and is Some", func() {
+			val := typact.Some("foo bar")
+			ret := val.IsSomeAnd(func(s string) bool {
+				return s == "foo bar"
+			})
+
+			Expect(ret).To(BeTrue())
+		})
+
+		It("should return false and not call fn if is None", func() {
+			val := typact.None[string]()
+			ret := val.IsSomeAnd(func(s string) bool {
+				Fail("fn should not be called")
+
+				return true
+			})
+
+			Expect(ret).To(BeFalse())
+		})
+
+		It("should return false if fn returns false and is Some", func() {
+			val := typact.Some("foo bar")
+			ret := val.IsSomeAnd(func(s string) bool {
+				return false
+			})
+
+			Expect(ret).To(BeFalse())
+		})
+	})
+
 	Describe("Or", func() {
 		It("when first is Some and second is Some", func() {
 			val := typact.Some("this is my option")

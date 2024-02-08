@@ -98,3 +98,28 @@ func ExampleOption_GetOrInsertWith() {
 	// 2
 	// 20
 }
+
+func ExampleOption_IsSomeAnd() {
+	x := typact.Some("foo")
+
+	ok := x.IsSomeAnd(func(str string) bool {
+		return str == "foo"
+	})
+	fmt.Printf("%t\n", ok)
+
+	ok = x.IsSomeAnd(func(str string) bool {
+		return str == ""
+	})
+	fmt.Printf("%t\n", ok)
+
+	y := typact.None[string]()
+	ok = y.IsSomeAnd(func(str string) bool {
+		return str != ""
+	})
+	fmt.Printf("%t\n", ok)
+
+	// Output:
+	// true
+	// false
+	// false
+}

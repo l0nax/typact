@@ -57,6 +57,13 @@ func (o Option[T]) IsSome() bool {
 	return o.some
 }
 
+// IsSomeAnd returns true if o contains a value and fn(o) returns true.
+//
+//gcassert:inline
+func (o Option[T]) IsSomeAnd(fn func(T) bool) bool {
+	return o.IsSome() && fn(o.UnsafeUnwrap())
+}
+
 // IsNone returns true if o contains no value.
 //
 //gcassert:inline

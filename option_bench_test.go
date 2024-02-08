@@ -126,6 +126,14 @@ func getSomeStr() typact.Option[string] {
 	return typact.None[string]()
 }
 
+func getNoneStr() typact.Option[string] {
+	if os.Getenv("NOT_EXISTING") != "" {
+		return typact.Some("Foo")
+	}
+
+	return typact.None[string]()
+}
+
 func BenchmarkOption_Unwrap(b *testing.B) {
 	b.ReportAllocs()
 
@@ -144,6 +152,58 @@ func BenchmarkOption_Expect(b *testing.B) {
 		str := vv.Expect("my string")
 		_ = str
 	}
+}
+
+func BenchmarkOption_IsSomeAnd(b *testing.B) {
+	b.ReportAllocs()
+
+	b.Run("Some", func(b *testing.B) {
+		vv := getSomeStr()
+
+		for i := 0; i < b.N; i++ {
+			ok := vv.IsSomeAnd(func(str string) bool {
+				return str == "Foo"
+			})
+
+			_ = ok
+		}
+	})
+
+	b.Run("None", func(b *testing.B) {
+		vv := getNoneStr()
+
+		for i := 0; i < b.N; i++ {
+			ok := vv.IsSomeAnd(func(str string) bool {
+				return str == "Foo"
+			})
+
+			_ = ok
+		}
+	})
+
+	b.Run("Some_Slice", func(b *testing.B) {
+		var vv typact.Option[[]string]
+		if os.Getenv("NOT_EXISTING") == "" {
+			vv = typact.Some([]string{
+				"Hello", "World", "Foo", "Bar",
+				"Test", "Something", "Home",
+			})
+		}
+
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			isLongEnough := vv.IsSomeAnd(func(strs []string) bool {
+				n := 0
+				for i := range strs {
+					n += len(strs[i])
+				}
+
+				return n > 100
+			})
+			_ = isLongEnough
+		}
+	})
 }
 
 func BenchmarkOption_UnwrapOr(b *testing.B) {
