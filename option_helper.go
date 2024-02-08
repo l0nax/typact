@@ -24,6 +24,8 @@ import (
 // implement [std.Cloner], this method will panic!
 //
 // BUG: Currently unsupported are arrays of any type.
+//
+// Unstable: This method is unstable and not guarded by the SemVer promise!
 func (o Option[T]) Clone() Option[T] {
 	if o.IsNone() {
 		return None[T]()
@@ -31,6 +33,18 @@ func (o Option[T]) Clone() Option[T] {
 
 	if isScalar[T]() {
 		return Some(o.val)
+	}
+
+	// NOTE: Converting to any should be last restort because if we use it
+	// with a scalar type, it will create a new allocation just for
+	// the conversion.
+	//
+	// With [implementsCloner] we can check if T implements [std.Cloner]
+	// without allocating.
+	// Additionally, we skip all the reflect checks, which is nice too.
+	if implementsCloner[T]() {
+		cloner := any(o.val).(std.Cloner[T])
+		return Some(cloner.Clone())
 	}
 
 	// NOTE: After extensive benchmarking, I found out that
@@ -54,16 +68,6 @@ func (o Option[T]) Clone() Option[T] {
 		return Some(any(cpy).(T))
 	case kind == reflect.Slice:
 		return Some(cloneSlice[T](o.UnsafeUnwrap(), refVal))
-	}
-
-	// NOTE: Converting to any should be last restort because if we use it
-	// with a scalar type, it will create a new allocation just for
-	// the conversion.
-	anyVal := any(o.val)
-
-	vv, ok := anyVal.(std.Cloner[T])
-	if ok {
-		return Some(vv.Clone())
 	}
 
 	panic("unable to clone value: type does not implement std.Cloner interface")
@@ -139,4 +143,12 @@ func isScalar[T any]() bool {
 	}
 
 	return false
+}
+
+// implementsCloner returns true if T implements the [std.Cloner] interface.
+func implementsCloner[T any]() bool {
+	var v T
+
+	_, ok := any(v).(std.Cloner[T])
+	return ok
 }
