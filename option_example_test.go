@@ -2,6 +2,7 @@ package typact_test
 
 import (
 	"fmt"
+	"slices"
 
 	"go.l0nax.org/typact"
 )
@@ -122,4 +123,34 @@ func ExampleOption_IsSomeAnd() {
 	// true
 	// false
 	// false
+}
+
+func ExampleOption_Filter_slice() {
+	x := []typact.Option[string]{
+		typact.Some("foo"),
+		typact.None[string](),
+		typact.Some("bar"),
+		typact.Some("baz"),
+		typact.None[string](),
+		typact.Some("hello"),
+		typact.Some("world"),
+	}
+
+	x = slices.DeleteFunc(x, func(val typact.Option[string]) bool {
+		return val.IsSomeAnd(IsNotZero[string])
+	})
+	fmt.Println(x)
+
+	// Output:
+	// [foo bar baz hello world]
+}
+
+func IsZero[T comparable](val T) bool {
+	var zero T
+	return val == zero
+}
+
+func IsNotZero[T comparable](val T) bool {
+	var zero T
+	return val != zero
 }
