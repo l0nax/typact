@@ -32,11 +32,11 @@ func (o Option[T]) Clone() Option[T] {
 		return None[T]()
 	}
 
+	switch {
 	// this ONLY includes direct scalars, i.e. type aliases are included
 	// A custom type of, e.g., string will return false here.
-	if isScalar[T]() {
+	case isScalar[T]():
 		return Some(o.val)
-	}
 
 	// NOTE: Converting to any should be last restort because if we use it
 	// with a scalar type, it will create a new allocation just for
@@ -45,9 +45,32 @@ func (o Option[T]) Clone() Option[T] {
 	// With [implementsCloner] we can check if T implements [std.Cloner]
 	// without allocating.
 	// Additionally, we skip all the reflect checks, which is nice too.
-	if implementsCloner[T]() {
+	case implementsCloner[T]():
 		cloner := any(o.val).(std.Cloner[T])
 		return Some(cloner.Clone())
+	}
+
+	return o.slowClone()
+}
+
+// slowClone is the slow cloning path, meaning that calling this method
+// will certainly result in a allocation.
+// Additionally, it keeps the Clone method slim, which increases the change
+// of being inlined.
+func (o Option[T]) slowClone() Option[T] {
+	// we cannot put this into the Clone method because it will result
+	// in a allocation just for calling the function.
+	if implementsCloner[*T]() {
+		// NOTE: We copy the value into a new variable to prevent
+		// the GoLang compiler from allocating a new object just by calling
+		// this method.
+		// This removes one allocation in cases where we have to copy a slice
+		// or equivalent types.
+		tmp := o.UnsafeUnwrap()
+		cloner := any(&tmp).(std.Cloner[*T])
+		cloned := cloner.Clone()
+
+		return Some(*cloned)
 	}
 
 	// NOTE: After extensive benchmarking, I found out that

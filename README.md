@@ -22,6 +22,77 @@ go get go.l0nax.org/typact
 
 Examples can be found in the [`examples`](./examples/) directory or at at the official [Godoc](https://pkg.go.dev/go.l0nax.org/typact) page.
 
+## Usage
+
+### Implementing `std.Cloner[T]` for `Option[T]`
+
+**:warning: NOTE:** This feature is marked as `Unstable`!
+<br />
+
+Because of some limitations of the GoLang type system, there are some important facts to remember when
+using the `Clone` method.
+
+#### Custom Structs: Pointer Receiver
+
+The best way to implement the `Clone` method is by using a pointer receiver like this:
+```go
+type MyData struct {
+  ID        int
+  CreatedAt time.Time
+  UpdatedAt time.Time
+}
+
+// Clone implements the std.Cloner interface.
+func (m *MyData) Clone() *MyData {
+  return &MyData{
+    ID:        m.ID,
+    CreatedAt: m.CreatedAt,
+    UpdatedAt: m.UpdatedAt,
+  }
+}
+```
+
+This allows you to use your type with and without a pointer.
+For example:
+```go
+var asPtr typact.Option[*MyData]
+var asVal typact.Option[MyData]
+```
+
+Calling `Clone` on `asPtr` _and_ `asVal` will result in a valid clone. This is because the `Clone`
+implementation of the `Option[T]` type checks if a type implements the `std.Cloner` interface with a
+pointer receiver.
+
+For now it is not possible to implement the `Clone` method without a pointer receiver and use `Clone`
+on a pointer value:
+```go
+type MyData struct {
+  ID        int
+  CreatedAt time.Time
+  UpdatedAt time.Time
+}
+
+// Clone implements the std.Cloner interface.
+func (m MyData) Clone() MyData {
+  return MyData{
+    ID:        m.ID,
+    CreatedAt: m.CreatedAt,
+    UpdatedAt: m.UpdatedAt,
+  }
+}
+
+func main() {
+  data := typact.Some(&MyData{
+    ID:        15,
+    CreatedAt: time.Now(),
+    UpdatedAt: time.Now(),
+  })
+  data.Clone() // This will panic because *MyData does not implement std.Cloner.
+}
+```
+
+Thus the best way to support all use-cases is to implement the interface with a pointer receiver.
+
 ## Motivation
 
 I've created this library because for one option types are really useful and prevent the _one billion dollar mistake_

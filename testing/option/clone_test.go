@@ -164,6 +164,20 @@ var _ = Describe("Clone", func() {
 			}))
 		})
 
+		It("should fallback to the pointer receiver", func() {
+			vv := typact.Some(MyData{
+				Data: "foo bar",
+			})
+			cpy := vv.Clone().Unwrap()
+
+			// change vv
+			vv.UnwrapAsRef().Data = "hello world"
+
+			Expect(cpy).To(BeEquivalentTo(MyData{
+				Data: "cpy: foo bar",
+			}))
+		})
+
 		/*
 			// XXX: This will/ must panic!
 					It("should call the custom Clone method on ptr ref", func() {
@@ -223,5 +237,15 @@ func (m myStruct) Clone() myStruct {
 	return myStruct{
 		CreatedAt: m.CreatedAt,
 		Data:      m.Data,
+	}
+}
+
+type MyData struct {
+	Data string
+}
+
+func (m *MyData) Clone() *MyData {
+	return &MyData{
+		Data: "cpy: " + m.Data,
 	}
 }

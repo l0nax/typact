@@ -404,6 +404,20 @@ func BenchmarkOption_Clone(b *testing.B) {
 		}
 	})
 
+	b.Run("CustomStructFallback", func(b *testing.B) {
+		// NOTE: The myData struct implements the std.Cloner interface with a pointer
+		// receiver.
+		val := typact.Some(myData{
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		})
+
+		for i := 0; i < b.N; i++ {
+			tmp := val.Clone()
+			_ = tmp
+		}
+	})
+
 	b.Run("ScalarSlice", func(b *testing.B) {
 		val := typact.Some([]string{
 			"Foo", "Bar",
