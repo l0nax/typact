@@ -102,7 +102,7 @@ func slowClone[T any](raw T, val reflect.Value, kind reflect.Kind) Option[T] {
 
 		return Some(any(cpy).(T))
 	case kind == reflect.Slice:
-		return Some(cloneSlice[T](raw, val))
+		return Some(cloneSlice[T](val))
 	case kind == reflect.Ptr:
 		return Some(clonePtr[T](val))
 	}
@@ -134,9 +134,10 @@ func slowReflectClone(value reflect.Value, kind reflect.Kind) reflect.Value {
 const maxByteSize = 1 << 30
 
 // cloneSlice returns a deep copy of the val slice.
+// It is assumed that T does NOT implement [std.Cloner].
 //
 // NOTE: T represents the slice, not the type of a slice element!
-func cloneSlice[T any](raw T, val reflect.Value) T {
+func cloneSlice[T any](val reflect.Value) T {
 	if val.IsNil() {
 		return zeroValue[T]()
 	}
@@ -161,22 +162,76 @@ func cloneSlice[T any](raw T, val reflect.Value) T {
 		return ret.Interface().(T)
 	}
 
-	// fast path check if T implements std.Cloner.
-	// We can convert to any here because we know that the element of T
-	// is not a scalar thus we are not creating an unnecessary allocation.
-	vv, ok := any(raw).(std.Cloner[T])
-	if ok {
-		return vv.Clone()
-	}
-
 	ret := reflect.MakeSlice(valType, elems, vCap)
 
-	// The caller did not implement a helper type, thus
-	// we have to manually clone the elements one by one.
+	// entryType is the type of a slice element, e.g. a string.
+	entryType := val.Type().Elem()
+	// holds whether T is a slice of pointers.
+	isEntryPointer := entryType.Kind() == reflect.Pointer
+
+	// The following four cases need to be supported:
+	//   1. T is []E; E implements [std.Cloner] with a pointer receiver
+	//   2. T is []E; E implements [std.Cloner] with a normal receiver
+	//   3. T is []*E; E implements [std.Cloner] with a pointer receiver
+	//   4. T is []*E; E implements [std.Cloner] with a normal receiver
+
+	// first, find out if the Clone method has a pointer receiver or not.
+	// secondly, get the method index.
+	var needsPtrRecv bool
+	var cloner reflect.Value // cloner is the Clone method
+
+	mm, ok := entryType.MethodByName("Clone")
+	if ok {
+		cloner = mm.Func
+	} else {
+		asPtr := reflect.PointerTo(entryType)
+
+		mm, ok = asPtr.MethodByName("Clone")
+		if !ok {
+			panic(
+				fmt.Errorf("unable to clone slice: type <%v> does not implement std.Cloner", entryType),
+			)
+		}
+
+		needsPtrRecv = true
+		cloner = mm.Func
+	}
+
 	for i := 0; i < elems; i++ {
 		elem := val.Index(i)
-		vv := elem.Interface().(std.Cloner[T])
-		ret.Index(i).Set(reflect.ValueOf(vv.Clone()))
+		if needsPtrRecv {
+			// NOTE: Addr will panic if elem.CanAddr() == false
+			// For now we let it just panic because we would do it later anyway
+			elem = elem.Addr()
+		}
+
+		clone := cloner.Call([]reflect.Value{elem})[0]
+		if needsPtrRecv || (clone.Kind() == reflect.Pointer && !isEntryPointer) {
+			// we need to dereference the pointer
+			clone = clone.Elem()
+		} else if isEntryPointer && clone.Kind() != reflect.Pointer {
+			// Special case => T is []*E and E implements [std.Cloner] with a normal receiver
+			// fast path: clone is addressable
+			if clone.CanAddr() {
+				clone = clone.Addr()
+			} else {
+				// since we cannot create a pointer to clone,
+				// we need to allocate a new pointer variable
+				// and assigne clone to it
+				//
+				// Like:
+				//   var clone E
+				//   var tmp *E
+				//   tmp = &clone
+				//
+				// Since entryType.Kind == ptr, we need to get the underlying type
+				tmp := reflect.New(entryType.Elem())
+				tmp.Elem().Set(clone)
+				clone = tmp
+			}
+		}
+
+		ret.Index(i).Set(clone)
 	}
 
 	return ret.Interface().(T)

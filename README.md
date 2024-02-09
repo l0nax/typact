@@ -93,6 +93,67 @@ func main() {
 
 Thus the best way to support all use-cases is to implement the interface with a pointer receiver.
 
+Benchmarking has also shown that implementing `std.Cloner[T]` with a pointer receiver results in better performance for
+all use cases:
+
+<details>
+<summary>Benchmark Results</summary>
+
+```
+  goos: linux
+goarch: amd64
+pkg: go.l0nax.org/typact
+cpu: AMD Ryzen 9 5900X 12-Core Processor
+                                           │  /tmp/base   │
+                                           │    sec/op    │
+Option_Clone/None-24                         1.915n ±  1%
+Option_Clone/String-24                       2.461n ±  1%
+Option_Clone/Int64-24                        2.465n ±  1%
+Option_Clone/CustomStructPointer-24          64.79n ±  3%
+Option_Clone/CustomStructFallback-24         168.2n ±  9%
+Option_Clone/ScalarSlice-24                  214.4n ±  4%
+
+Option_Clone/PtrSliceWrapper_PtrRecv-24      1.537µ ±  4%
+Option_Clone/SliceWrapper_PtrRecv-24         1.588µ ±  5%
+Option_Clone/PtrSliceWrapper_NormalRecv-24   1.943µ ±  5%
+Option_Clone/SliceWrapper_NormalRecv-24      1.887µ ± 15%
+geomean                                      109.3n
+
+                                           │  /tmp/base   │
+                                           │     B/op     │
+Option_Clone/None-24                         0.000 ± 0%
+Option_Clone/String-24                       0.000 ± 0%
+Option_Clone/Int64-24                        0.000 ± 0%
+Option_Clone/CustomStructPointer-24          48.00 ± 0%
+Option_Clone/CustomStructFallback-24         96.00 ± 0%
+Option_Clone/ScalarSlice-24                  112.0 ± 0%
+
+Option_Clone/PtrSliceWrapper_PtrRecv-24      328.0 ± 0%
+Option_Clone/SliceWrapper_PtrRecv-24         408.0 ± 0%
+Option_Clone/PtrSliceWrapper_NormalRecv-24   424.0 ± 0%
+Option_Clone/SliceWrapper_NormalRecv-24      408.0 ± 0%
+geomean                                                 ¹
+¹ summaries must be >0 to compute geomean
+
+                                           │  /tmp/base   │
+                                           │  allocs/op   │
+Option_Clone/None-24                         0.000 ± 0%
+Option_Clone/String-24                       0.000 ± 0%
+Option_Clone/Int64-24                        0.000 ± 0%
+Option_Clone/CustomStructPointer-24          1.000 ± 0%
+Option_Clone/CustomStructFallback-24         2.000 ± 0%
+Option_Clone/ScalarSlice-24                  3.000 ± 0%
+
+Option_Clone/PtrSliceWrapper_PtrRecv-24      11.00 ± 0%
+Option_Clone/SliceWrapper_PtrRecv-24         11.00 ± 0%
+Option_Clone/PtrSliceWrapper_NormalRecv-24   13.00 ± 0%
+Option_Clone/SliceWrapper_NormalRecv-24      11.00 ± 0%
+geomean                                                 ¹
+¹ summaries must be >0 to compute geomean
+```
+
+</details>
+
 ## Motivation
 
 I've created this library because for one option types are really useful and prevent the _one billion dollar mistake_

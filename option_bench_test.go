@@ -362,6 +362,25 @@ func (m *myData) Clone() *myData {
 	}
 }
 
+type myStruct struct {
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+func (m myStruct) Clone() myStruct {
+	return myStruct{
+		CreatedAt: m.CreatedAt,
+		UpdatedAt: m.UpdatedAt,
+	}
+}
+
+type (
+	MySimpleDataPtrList   []*myData
+	MySimpleDataList      []myData
+	MySimpleStructPtrList []*myStruct
+	MySimpleStructList    []myStruct
+)
+
 func BenchmarkOption_Clone(b *testing.B) {
 	b.ReportAllocs()
 
@@ -423,6 +442,98 @@ func BenchmarkOption_Clone(b *testing.B) {
 			"Foo", "Bar",
 			"Hello", "World",
 		})
+
+		for i := 0; i < b.N; i++ {
+			tmp := val.Clone()
+			_ = tmp
+		}
+	})
+
+	// This benchmarks
+	//   3. T is []*E; E implements [std.Cloner] with a pointer receiver
+	b.Run("PtrSliceWrapper_PtrRecv", func(b *testing.B) {
+		val := typact.Some(MySimpleDataPtrList{
+			{
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
+			},
+			{
+				CreatedAt: time.Now().Add(time.Hour),
+				UpdatedAt: time.Now().Add(time.Hour),
+			},
+		})
+
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			tmp := val.Clone()
+			_ = tmp
+		}
+	})
+
+	// This benchmarks
+	//   1. T is []E; E implements [std.Cloner] with a pointer receiver
+	b.Run("SliceWrapper_PtrRecv", func(b *testing.B) {
+		val := typact.Some(MySimpleDataList{
+			{
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
+			},
+			{
+				CreatedAt: time.Now().Add(time.Hour),
+				UpdatedAt: time.Now().Add(time.Hour),
+			},
+		})
+
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			tmp := val.Clone()
+			_ = tmp
+		}
+	})
+
+	// This benchmarks
+	//   4. T is []*E; E implements [std.Cloner] with a normal receiver
+	b.Run("PtrSliceWrapper_NormalRecv", func(b *testing.B) {
+		val := typact.Some(MySimpleStructPtrList{
+			{
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
+			},
+			{
+				CreatedAt: time.Now().Add(time.Hour),
+				UpdatedAt: time.Now().Add(time.Hour),
+			},
+		})
+
+		b.ReportAllocs()
+		b.ResetTimer()
+
+		for i := 0; i < b.N; i++ {
+			tmp := val.Clone()
+			_ = tmp
+		}
+	})
+
+	// This benchmarks
+	//   2. T is []E; E implements [std.Cloner] with a normal receiver
+	b.Run("SliceWrapper_NormalRecv", func(b *testing.B) {
+		val := typact.Some(MySimpleStructList{
+			{
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
+			},
+			{
+				CreatedAt: time.Now().Add(time.Hour),
+				UpdatedAt: time.Now().Add(time.Hour),
+			},
+		})
+
+		b.ReportAllocs()
+		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
 			tmp := val.Clone()
