@@ -51,6 +51,14 @@ func Wrap[T any](val T, some bool) Option[T] {
 	}
 }
 
+// IsZero returns whether o is [None].
+//
+// NOTE: This method is only added to support NULL values
+// within YAML. In all cases, IsNone and IsSome should be used!
+func (o Option[T]) IsZero() bool {
+	return o.IsNone()
+}
+
 // IsSome returns true if o contains a value.
 //
 //gcassert:inline
