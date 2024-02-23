@@ -9,6 +9,16 @@ import (
 	"go.l0nax.org/typact/std"
 )
 
+// CloneWith clones o by calling fn, if o contains a value.
+func (o Option[T]) CloneWith(fn func(T) T) Option[T] {
+	if o.IsNone() {
+		return None[T]()
+	}
+
+	cpy := fn(o.UnsafeUnwrap())
+	return Some(cpy)
+}
+
 // Clone returns a deep copy of T, if o contains a value.
 // Otherwise [None] is returned.
 //
