@@ -7,9 +7,36 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.l0nax.org/typact"
+	"gopkg.in/yaml.v3"
 )
 
 var _ = Describe("Option", func() {
+	Describe("correctly handle YAML", func() {
+		type myData struct {
+			Name typact.Option[string] `yaml:"name"`
+		}
+
+		It("should be able to marshal a value", func() {
+			dat := myData{
+				Name: typact.Some("Foo Bar"),
+			}
+
+			raw, err := yaml.Marshal(dat)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(raw)).To(BeEquivalentTo(`name: Foo Bar
+`))
+		})
+
+		It("should be able to marshal null", func() {
+			dat := myData{}
+
+			raw, err := yaml.Marshal(dat)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(raw)).To(BeEquivalentTo(`name: null
+`))
+		})
+	})
+
 	Describe("Create a value", func() {
 		It("should return Some with Wrap(T, true)", func() {
 			vv := typact.Wrap("foo bar", true)
