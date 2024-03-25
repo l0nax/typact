@@ -296,6 +296,20 @@ func (o Option[T]) OrElse(valueFn func() Option[T]) Option[T] {
 	return valueFn()
 }
 
+// Take takes the value of o and returns it, leaving [None] in its place.
+//
+// Experimental: This method is considered experimental and may change or be removed in the future.
+func (o *Option[T]) Take() Option[T] {
+	if o.IsNone() {
+		return None[T]()
+	}
+
+	vv := Some(o.UnsafeUnwrap())
+	*o = None[T]()
+
+	return vv
+}
+
 // Value implements the [driver.Valuer] interface.
 // It returns NULL if o is [None], otherwise it
 // returns the value of o.
