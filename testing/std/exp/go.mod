@@ -1,6 +1,6 @@
 module go.l0nax.org/typact/testing/std/exp
 
-go 1.21.6
+go 1.22.3
 
 replace go.l0nax.org/typact => ../../../
 
