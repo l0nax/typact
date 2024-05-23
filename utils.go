@@ -6,11 +6,6 @@ import (
 	"go.l0nax.org/typact/internal/features"
 )
 
-// zeroValue returns the zero value of T.
-func zeroValue[T any]() (t T) {
-	return t
-}
-
 // isScalarCopyable returns whether the given Kind is a scalar type
 // which can be copied by value.
 func isScalarCopyable(kind reflect.Kind) bool {
@@ -21,7 +16,7 @@ func isScalarCopyable(kind reflect.Kind) bool {
 		reflect.UnsafePointer,
 		reflect.Invalid,
 		reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
-			reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
 		reflect.Float32, reflect.Float64,
 		reflect.Complex64, reflect.Complex128:
 

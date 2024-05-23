@@ -150,7 +150,7 @@ const maxByteSize = 1 << 30
 // NOTE: T represents the slice, not the type of a slice element!
 func cloneSlice[T any](val reflect.Value) T {
 	if val.IsNil() {
-		return zeroValue[T]()
+		return types.ZeroValue[T]()
 	}
 
 	valType := val.Type()
@@ -251,7 +251,7 @@ func cloneSlice[T any](val reflect.Value) T {
 // clonePtr returns a deep copy of the val pointer.
 func clonePtr[T any](val reflect.Value) T {
 	if val.IsNil() {
-		return zeroValue[T]()
+		return types.ZeroValue[T]()
 	}
 
 	// TODO: Handle opaque pointers like

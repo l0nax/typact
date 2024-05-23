@@ -6,6 +6,8 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
+
+	"go.l0nax.org/typact/internal/types"
 )
 
 // Option represents an optional value.
@@ -138,7 +140,7 @@ func (o Option[T]) UnwrapOrZero() T {
 		return o.val
 	}
 
-	return zeroValue[T]()
+	return types.ZeroValue[T]()
 }
 
 // UnwrapAsRef unwraps o and returns the reference to the value.
@@ -338,7 +340,7 @@ func (o *Option[T]) Scan(src any) error {
 	if src == nil {
 		// only allocate in slow path.
 		// this overrides any previously defined value in the field.
-		o.val = zeroValue[T]()
+		o.val = types.ZeroValue[T]()
 
 		return nil
 	}
@@ -346,7 +348,7 @@ func (o *Option[T]) Scan(src any) error {
 	if implementsSQLScanner[T]() {
 		// TODO(l0nax): Add tests to check if override works!
 		// we first ensure to set o.val to the zero value, just in case
-		o.val = zeroValue[T]()
+		o.val = types.ZeroValue[T]()
 
 		scanner := any(&o.val).(sql.Scanner)
 
@@ -360,7 +362,7 @@ func (o *Option[T]) Scan(src any) error {
 	if err != nil {
 		// only allocate in slow path
 		// this overrides any previously defined value in the field.
-		o.val = zeroValue[T]()
+		o.val = types.ZeroValue[T]()
 
 		// TODO(l0nax): Wrap the returned error and return it!
 		return err
@@ -412,7 +414,7 @@ func (o *Option[T]) UnmarshalJSON(data []byte) error {
 
 	if bytes.Equal(data, []byte("null")) {
 		// only allocate in slow path
-		o.val = zeroValue[T]()
+		o.val = types.ZeroValue[T]()
 
 		return nil
 	}
@@ -420,7 +422,7 @@ func (o *Option[T]) UnmarshalJSON(data []byte) error {
 	err := json.Unmarshal(data, &o.val)
 	if err != nil {
 		// only allocate in slow path
-		o.val = zeroValue[T]()
+		o.val = types.ZeroValue[T]()
 
 		// TODO(l0nax): Wrap the returned error and return it!
 		return err
