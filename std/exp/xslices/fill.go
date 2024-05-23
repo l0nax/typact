@@ -21,7 +21,7 @@ func Fill[S ~[]E, E any](slice S, value E) {
 
 	// the bigger the slice, the faster the copy.
 	// The cost for calling copy is amortized over time.
-	for i := 1; i<len(slice); i *= 2 {
+	for i := 1; i < len(slice); i *= 2 {
 		copy(slice[i:], slice[:i])
 	}
 }
