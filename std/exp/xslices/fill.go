@@ -17,11 +17,32 @@ func Fill[S ~[]E, E any](slice S, value E) {
 	// clear the values which will be overriden
 	// allowing the runtime to GC them faster and to
 	// prevent memory leaks.
-	clear(slice[1:])
+	if !isScalar[E]() {
+		clear(slice[1:])
+	}
 
 	// the bigger the slice, the faster the copy.
 	// The cost for calling copy is amortized over time.
 	for i := 1; i < len(slice); i *= 2 {
 		copy(slice[i:], slice[:i])
 	}
+}
+
+// isScalar reports whether the type T is a scalar type.
+// The check is done without allocating on the heap.
+func isScalar[T any]() bool {
+	var v T
+
+	switch any(v).(type) {
+	case int, int8, int16, int32, int64,
+		uint, uint8, uint16, uint32, uint64,
+		float32, float64,
+		complex64, complex128,
+		bool,
+		string:
+
+		return true
+	}
+
+	return false
 }
