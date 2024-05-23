@@ -1,9 +1,12 @@
 package xslices
 
 import (
+	"math/bits"
 	"reflect"
 	"testing"
 
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 	"go.l0nax.org/typact/std/exp/xslices"
 )
 
@@ -142,4 +145,54 @@ func BenchmarkFill(b *testing.B) {
 			xslices.Fill(data, 66)
 		}
 	})
+}
+
+var _ = Describe("Fill", func() {
+	Describe("FillValues", func() {
+		It("should correctly fill a perfect slice", func() {
+			pattern := []int{1, 2, 3, 4}
+			slice := make([]int, 4*8)
+			expect := repeat(pattern, 8)
+
+			xslices.FillValues(slice, pattern...)
+			Expect(slice).To(Equal(expect))
+		})
+
+		It("should fill if slice has an uneven length", func() {
+			pattern := []int{1, 2, 3, 4}
+			slice := make([]int, 4*8+1)
+
+			expect := repeat(pattern, 8)
+			expect = append(expect, 1)
+
+			xslices.FillValues(slice, pattern...)
+			Expect(slice).To(Equal(expect))
+		})
+	})
+})
+
+// repeat returns a new slice that repeats the provided slice the given number of times.
+// The result has length and capacity len(x) * count.
+// The result is never nil.
+// Repeat panics if count is negative or if the result of (len(x) * count)
+// overflows.
+//
+// NOTE: This has been copied from the GoLang source code!
+// TODO: Replace me with [slices.Repeat] once go 1.23 has been released!
+func repeat[S ~[]E, E any](x S, count int) S {
+	if count < 0 {
+		panic("cannot be negative")
+	}
+
+	const maxInt = ^uint(0) >> 1
+	if hi, lo := bits.Mul(uint(len(x)), uint(count)); hi > 0 || lo > maxInt {
+		panic("the result of (len(x) * count) overflows")
+	}
+
+	newslice := make(S, len(x)*count)
+	n := copy(newslice, x)
+	for n < len(newslice) {
+		n += copy(newslice[n:], newslice[:n])
+	}
+	return newslice
 }

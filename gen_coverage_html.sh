@@ -41,6 +41,15 @@ go test -v \
 )
 
 (
+  cd ./testing/std/exp
+  go test -v \
+    -cover \
+    -covermode=atomic \
+    -coverpkg=${COVERPKG} \
+    ./... -args -test.gocoverdir="${COVDATA}"
+)
+
+(
   cd ./std/option
   go test -v \
     -cover \
