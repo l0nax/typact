@@ -6,6 +6,7 @@ import (
 	"strings"
 	"unsafe"
 
+	"go.l0nax.org/typact/internal/types"
 	"go.l0nax.org/typact/std"
 )
 
@@ -45,7 +46,7 @@ func (o Option[T]) Clone() Option[T] {
 	switch {
 	// this ONLY includes direct scalars, i.e. type aliases are included
 	// A custom type of, e.g., string will return false here.
-	case isScalar[T]():
+	case types.IsScalar[T]():
 		return Some(o.val)
 
 	// NOTE: Converting to any should be last restort because if we use it
@@ -273,24 +274,6 @@ func clonePtr[T any](val reflect.Value) T {
 	dst.Elem().Set(cloned)
 
 	return dst.Interface().(T)
-}
-
-// isScalar reports whether the type T is a scalar type.
-// The check is done without allocating on the heap.
-func isScalar[T any]() bool {
-	var v T
-
-	switch any(v).(type) {
-	case int, int8, int16, int32, int64,
-		uint, uint8, uint16, uint32, uint64,
-		float32, float64,
-		complex64, complex128,
-		bool,
-		string:
-		return true
-	}
-
-	return false
 }
 
 // implementsCloner returns true if T implements the [std.Cloner] interface.
