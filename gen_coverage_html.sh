@@ -5,7 +5,7 @@ set -o nounset  # abort on unbound variable
 set -o pipefail # don't hide errors within pipes
 
 export COVDATA="$(pwd)/covdata"
-export COVERPKG="go.l0nax.org/typact,go.l0nax.org/typact/std,go.l0nax.org/typact/std/option,go.l0nax.org/typact/std/exp,go.l0nax.org/typact/std/exp/cmpop,go.l0nax.org/typact/std/exp/pred"
+export COVERPKG="go.l0nax.org/typact,go.l0nax.org/typact/std,go.l0nax.org/typact/std/option,go.l0nax.org/typact/std/exp,go.l0nax.org/typact/std/exp/cmpop,go.l0nax.org/typact/std/exp/pred,go.l0nax.org/typact/std/exp/xslices"
 
 function clean_data {
   rm -rf ${COVDATA}
