@@ -1,6 +1,6 @@
 module go.l0nax.org/typact/testing/option
 
-go 1.21.6
+go 1.22.3
 
 require (
 	github.com/onsi/ginkgo/v2 v2.15.0
