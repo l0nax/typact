@@ -1,0 +1,4 @@
+title: Add new package `exp/xslices` which provides additional helper to the `slices`
+  std package
+type: 0
+author: Emanuel Bennici

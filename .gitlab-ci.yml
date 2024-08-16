@@ -2,7 +2,7 @@
 # improved performance.
 variables:
   GO_IMAGE: "docker.io/library/golang"
-  GO_VERSION: "1.21.6-bookworm"
+  GO_VERSION: "1.22.3-bookworm"
 
 .go-cache:
   variables:

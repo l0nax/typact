@@ -154,3 +154,20 @@ func IsNotZero[T comparable](val T) bool {
 	var zero T
 	return val != zero
 }
+
+func ExampleOption_CloneWith_custom() {
+	cloner := func(x []string) []string {
+		return slices.Clone(x)
+	}
+
+	x := typact.Some([]string{"Hello", "World"})
+	y := x.CloneWith(cloner)
+
+	// alter elem in x
+	(*x.UnwrapAsRef())[0] = "Foo"
+
+	fmt.Println(y.Unwrap())
+
+	// Output:
+	// [Hello World]
+}

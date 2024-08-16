@@ -1,0 +1,4 @@
+title: The `Option[T].Clone()` method now fallbacks to pointer-receiver calling on
+  custom types, if available instead of panicing
+type: 6
+author: Emanuel Bennici

@@ -164,6 +164,119 @@ var _ = Describe("Clone", func() {
 			}))
 		})
 
+		It("should fallback to the pointer receiver", func() {
+			vv := typact.Some(MyData{
+				Data: "foo bar",
+			})
+			cpy := vv.Clone().Unwrap()
+
+			// change vv
+			vv.UnwrapAsRef().Data = "hello world"
+
+			Expect(cpy).To(BeEquivalentTo(MyData{
+				Data: "cpy: foo bar",
+			}))
+		})
+
+		Context("with a slice", func() {
+			It("should clone each element by calling Clone using the fallback mechanism", func() {
+				vv := typact.Some([]MyData{
+					{
+						Data: "foo bar",
+					},
+					{
+						Data: "bar baz",
+					},
+					{
+						Data: "hello world",
+					},
+				})
+				cpy := vv.Clone().Unwrap()
+
+				// change vv
+				ref := vv.UnwrapAsRef()
+				(*ref)[0] = MyData{
+					Data: "changed",
+				}
+
+				Expect(cpy).To(BeEquivalentTo([]MyData{
+					{
+						Data: "cpy: foo bar",
+					},
+					{
+						Data: "cpy: bar baz",
+					},
+					{
+						Data: "cpy: hello world",
+					},
+				}))
+			})
+
+			It("should clone each element by calling Clone", func() {
+				vv := typact.Some([]*MyData{
+					{
+						Data: "foo bar",
+					},
+					{
+						Data: "bar baz",
+					},
+					{
+						Data: "hello world",
+					},
+				})
+				cpy := vv.Clone().Unwrap()
+
+				// change vv
+				ref := vv.UnwrapAsRef()
+				(*ref)[0].Data = "changed"
+
+				Expect(cpy).To(BeEquivalentTo([]*MyData{
+					{
+						Data: "cpy: foo bar",
+					},
+					{
+						Data: "cpy: bar baz",
+					},
+					{
+						Data: "cpy: hello world",
+					},
+				}))
+			})
+
+			It("should use the Clone method of the helper type", func() {
+				vv := typact.Some(MyDataList([]MyData{
+					{
+						Data: "foo bar",
+					},
+					{
+						Data: "bar baz",
+					},
+					{
+						Data: "hello world",
+					},
+				}))
+				cpy := vv.Clone().Unwrap()
+
+				// change vv
+				ref := vv.UnwrapAsRef()
+				(*ref)[0] = MyData{
+					Data: "changed",
+				}
+
+				Expect(cpy).To(BeEquivalentTo(MyDataList([]MyData{
+					{
+						Data: "new: cpy: foo bar",
+					},
+					{
+						Data: "new: cpy: bar baz",
+					},
+					{
+						Data: "new: cpy: hello world",
+					},
+				})))
+			})
+		})
+
 		/*
 			// XXX: This will/ must panic!
 					It("should call the custom Clone method on ptr ref", func() {
@@ -184,6 +297,132 @@ var _ = Describe("Clone", func() {
 						}))
 					})
 		*/
+	})
+
+	Describe("Custom type and slice wrapper", func() {
+		It("should clone []*T with ptr recv Clone", func() {
+			vv := typact.Some(MySimpleDataPtrList([]*MyData{
+				{
+					Data: "foo bar",
+				},
+				{
+					Data: "bar baz",
+				},
+				{
+					Data: "hello world",
+				},
+			}))
+			cpy := vv.Clone().Unwrap()
+
+			// change vv
+			ref := vv.UnwrapAsRef()
+			(*ref)[0].Data = "changed"
+
+			Expect(cpy).To(BeEquivalentTo(MySimpleDataPtrList([]*MyData{
+				{
+					Data: "cpy: foo bar",
+				},
+				{
+					Data: "cpy: bar baz",
+				},
+				{
+					Data: "cpy: hello world",
+				},
+			})))
+		})
+
+		It("should clone []T with ptr recv Clone", func() {
+			vv := typact.Some(MySimpleDataList([]MyData{
+				{
+					Data: "foo bar",
+				},
+				{
+					Data: "bar baz",
+				},
+				{
+					Data: "hello world",
+				},
+			}))
+			cpy := vv.Clone().Unwrap()
+
+			// change vv
+			ref := vv.UnwrapAsRef()
+			(*ref)[0].Data = "changed"
+
+			Expect(cpy).To(BeEquivalentTo(MySimpleDataList([]MyData{
+				{
+					Data: "cpy: foo bar",
+				},
+				{
+					Data: "cpy: bar baz",
+				},
+				{
+					Data: "cpy: hello world",
+				},
+			})))
+		})
+
+		It("should clone []*T with normal recv Clone", func() {
+			vv := typact.Some(MySimpleStructPtrList([]*myStruct{
+				{
+					Data: "foo bar",
+				},
+				{
+					Data: "bar baz",
+				},
+				{
+					Data: "hello world",
+				},
+			}))
+			cpy := vv.Clone().Unwrap()
+
+			// change vv
+			ref := vv.UnwrapAsRef()
+			(*ref)[0].Data = "changed"
+
+			Expect(cpy).To(BeEquivalentTo(MySimpleStructPtrList([]*myStruct{
+				{
+					Data: "foo bar",
+				},
+				{
+					Data: "bar baz",
+				},
+				{
+					Data: "hello world",
+				},
+			})))
+		})
+
+		It("should clone []T with normal recv Clone", func() {
+			vv := typact.Some(MySimpleStructList([]myStruct{
+				{
+					Data: "foo bar",
+				},
+				{
+					Data: "bar baz",
+				},
+				{
+					Data: "hello world",
+				},
+			}))
+			cpy := vv.Clone().Unwrap()
+
+			// change vv
+			ref := vv.UnwrapAsRef()
+			(*ref)[0].Data = "changed"
+
+			Expect(cpy).To(BeEquivalentTo(MySimpleStructList([]myStruct{
+				{
+					Data: "foo bar",
+				},
+				{
+					Data: "bar baz",
+				},
+				{
+					Data: "hello world",
+				},
+			})))
+		})
 	})
 })
 
@@ -225,3 +464,32 @@ func (m myStruct) Clone() myStruct {
 		Data:      m.Data,
 	}
 }
+
+type MyData struct {
+	Data string
+}
+
+func (m *MyData) Clone() *MyData {
+	return &MyData{
+		Data: "cpy: " + m.Data,
+	}
+}
+
+type MyDataList []MyData
+
+func (m MyDataList) Clone() MyDataList {
+	cpy := make(MyDataList, len(m))
+	for i := range m {
+		cpy[i] = *(m[i].Clone())
+		cpy[i].Data = "new: " + cpy[i].Data
+	}
+
+	return cpy
+}
+
+type (
+	MySimpleDataPtrList   []*MyData
+	MySimpleDataList      []MyData
+	MySimpleStructPtrList []*myStruct
+	MySimpleStructList    []myStruct
+)

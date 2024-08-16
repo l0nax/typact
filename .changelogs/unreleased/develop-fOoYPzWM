@@ -1,0 +1,4 @@
+title: Add `IsZero` method to `Option[T]` to support [yaml](https://pkg.go.dev/gopkg.in/yaml.v3\#Marshal)
+  `null` value representation
+type: 0
+author: Emanuel Bennici

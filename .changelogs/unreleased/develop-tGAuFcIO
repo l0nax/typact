@@ -1,0 +1,3 @@
+title: Add `CloneWith` method to `Option[T]` type
+type: 0
+author: Emanuel Bennici
