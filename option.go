@@ -58,7 +58,7 @@ func Wrap[T any](val T, some bool) Option[T] {
 // NOTE: This method is only added to support NULL values
 // within YAML. In all cases, IsNone and IsSome should be used!
 func (o Option[T]) IsZero() bool {
-	return o.IsNone()
+	return !o.some
 }
 
 // IsSome returns true if o contains a value.
@@ -72,14 +72,14 @@ func (o Option[T]) IsSome() bool {
 //
 //gcassert:inline
 func (o Option[T]) IsSomeAnd(fn func(T) bool) bool {
-	return o.IsSome() && fn(o.UnsafeUnwrap())
+	return o.some && fn(o.UnsafeUnwrap())
 }
 
 // IsNone returns true if o contains no value.
 //
 //gcassert:inline
 func (o Option[T]) IsNone() bool {
-	return !o.IsSome()
+	return !o.some
 }
 
 // Deconstruct returns the value and whether it is present.
@@ -102,7 +102,7 @@ func (o Option[T]) UnsafeUnwrap() T {
 //
 //gcassert:inline
 func (o Option[T]) Expect(msg string) T {
-	if o.IsSome() {
+	if o.some {
 		return o.UnsafeUnwrap()
 	}
 
@@ -126,7 +126,7 @@ func (o Option[T]) Unwrap() T {
 //
 //gcassert:inline
 func (o Option[T]) UnwrapOr(value T) T {
-	if o.IsSome() {
+	if o.some {
 		return o.val
 	}
 
@@ -136,7 +136,7 @@ func (o Option[T]) UnwrapOr(value T) T {
 // UnwrapOrZero returns the value of o, if present
 // Otherwise the zero value of T is returned
 func (o Option[T]) UnwrapOrZero() T {
-	if o.IsSome() {
+	if o.some {
 		return o.val
 	}
 
@@ -146,7 +146,7 @@ func (o Option[T]) UnwrapOrZero() T {
 // UnwrapAsRef unwraps o and returns the reference to the value.
 // If the value is not present, this method will panic.
 func (o *Option[T]) UnwrapAsRef() *T {
-	if o.IsSome() {
+	if o.some {
 		return &o.val
 	}
 
@@ -156,7 +156,7 @@ func (o *Option[T]) UnwrapAsRef() *T {
 // UnwrapOrElse returns the value of o, if present.
 // Otherwise it executes fn and returns the value.
 func (o Option[T]) UnwrapOrElse(fn func() T) T {
-	if o.IsSome() {
+	if o.some {
 		return o.val
 	}
 
@@ -166,7 +166,7 @@ func (o Option[T]) UnwrapOrElse(fn func() T) T {
 // Inspect executes fn if o contains a value.
 // It returns o.
 func (o Option[T]) Inspect(fn func(T)) Option[T] {
-	if o.IsSome() {
+	if o.some {
 		fn(o.UnsafeUnwrap())
 	}
 
@@ -189,7 +189,7 @@ func (o *Option[T]) Insert(val T) *T {
 // See [Insert], which updates the value even if the
 // option already contains [Some].
 func (o *Option[T]) GetOrInsert(val T) *T {
-	if o.IsNone() {
+	if !o.some {
 		*o = Some(val)
 	}
 
@@ -199,7 +199,7 @@ func (o *Option[T]) GetOrInsert(val T) *T {
 // GetOrInsertWith inserts a value returned by fn into o, if o is [None].
 // It subsequently returns a pointer to the value.
 func (o *Option[T]) GetOrInsertWith(fn func() T) *T {
-	if o.IsNone() {
+	if !o.some {
 		*o = Some(fn())
 	}
 
@@ -210,7 +210,7 @@ func (o *Option[T]) GetOrInsertWith(fn func() T) *T {
 // It returns [Some] with the new value returned by fn.
 // Otherwise [None] will be returned.
 func (o Option[T]) Map(fn func(T) T) Option[T] {
-	if o.IsSome() {
+	if o.some {
 		return Some(fn(o.UnsafeUnwrap()))
 	}
 
@@ -221,7 +221,7 @@ func (o Option[T]) Map(fn func(T) T) Option[T] {
 // or applies fn to the contained value (if [Some]).
 // Otherwise the provided (fallback) value is returned.
 func (o Option[T]) MapOr(fn func(T) T, value T) T {
-	if o.IsSome() {
+	if o.some {
 		return fn(o.UnsafeUnwrap())
 	}
 
@@ -233,7 +233,7 @@ func (o Option[T]) MapOr(fn func(T) T, value T) T {
 //
 // This allows conditional transformation of the Option's value or generation of a default value when none is present.
 func (o Option[T]) MapOrElse(mapFn func(T) T, valueFn func() T) T {
-	if o.IsSome() {
+	if o.some {
 		return mapFn(o.UnsafeUnwrap())
 	}
 
@@ -244,7 +244,7 @@ func (o Option[T]) MapOrElse(mapFn func(T) T, valueFn func() T) T {
 //   - [None] if fn returns false
 //   - [Some] if fn returns true
 func (o Option[T]) Filter(fn func(T) bool) Option[T] {
-	if o.IsSome() && fn(o.UnsafeUnwrap()) {
+	if o.some && fn(o.UnsafeUnwrap()) {
 		return o
 	}
 
@@ -262,7 +262,7 @@ func (o *Option[T]) Replace(val T) Option[T] {
 
 // And returns [None] if o is [None], otherwise opt is returned.
 func (o Option[T]) And(opt Option[T]) Option[T] {
-	if o.IsSome() {
+	if o.some {
 		return opt
 	}
 
@@ -272,7 +272,7 @@ func (o Option[T]) And(opt Option[T]) Option[T] {
 // AndThen returns None if o is none, otherwise fn is called and the return
 // value is wrapped and returned.
 func (o Option[T]) AndThen(fn func(T) Option[T]) Option[T] {
-	if o.IsSome() {
+	if o.some {
 		return fn(o.val)
 	}
 
@@ -281,7 +281,7 @@ func (o Option[T]) AndThen(fn func(T) Option[T]) Option[T] {
 
 // Or returns the option if it contains a value, otherwise returns value.
 func (o Option[T]) Or(value Option[T]) Option[T] {
-	if o.IsSome() {
+	if o.some {
 		return o
 	}
 
@@ -291,7 +291,7 @@ func (o Option[T]) Or(value Option[T]) Option[T] {
 // OrElse returns o, if [Some].
 // Otherwise the return value of valueFn is returned.
 func (o Option[T]) OrElse(valueFn func() Option[T]) Option[T] {
-	if o.IsSome() {
+	if o.some {
 		return o
 	}
 
@@ -302,7 +302,7 @@ func (o Option[T]) OrElse(valueFn func() Option[T]) Option[T] {
 //
 // Experimental: This method is considered experimental and may change or be removed in the future.
 func (o *Option[T]) Take() Option[T] {
-	if o.IsNone() {
+	if !o.some {
 		return None[T]()
 	}
 
@@ -319,7 +319,7 @@ func (o *Option[T]) Take() Option[T] {
 // If T implements the [driver.Valuer] interface, the method
 // will be called instead.
 func (o Option[T]) Value() (driver.Value, error) {
-	if o.IsNone() {
+	if !o.some {
 		return nil, nil
 	}
 
