@@ -27,7 +27,17 @@ func Uint64N(max uint64) (uint64, error) {
 		panic("Argument max must be > 0")
 	}
 
-	num, err := Uint64()
+	var data [8]byte
+
+	return uint64NWithBuf(data[:], max)
+}
+
+// uint64NWithBuf returns a uniform random value in [0, max) as uint64.
+// The given byte slice must be at least 8 bytes long. If the byte slice has less than 8 bytes,
+// the function will panic.
+// It is used as buffer to write the random data to.
+func uint64NWithBuf(data []byte, max uint64) (uint64, error) {
+	num, err := uint64WithBuf(data[:])
 	if err != nil {
 		return 0, nil
 	}
@@ -75,7 +85,7 @@ func Uint64N(max uint64) (uint64, error) {
 	if lo < max {
 		thresh := -max % max
 		for lo < thresh {
-			num, err = Uint64()
+			num, err = uint64WithBuf(data[:])
 			if err != nil {
 				return 0, nil
 			}
@@ -114,6 +124,29 @@ func Uint64() (uint64, error) {
 		uint64(data[5])<<40 |
 		uint64(data[6])<<48 |
 		uint64(data[7])<<56, nil
+}
+
+// uint64WithBuf returns a uniform random value as uint64.
+// The given byte slice must be at least 8 bytes long. If the byte slice has less than 8 bytes,
+// the function will panic.
+// It is used as buffer to write the random data to.
+func uint64WithBuf(data []byte) (uint64, error) {
+	_, err := rand.Read(data[:])
+	if err != nil {
+		return 0, fmt.Errorf("unable to read random data: %w", err)
+	}
+
+	// reduce OOB check to only one
+	data7 := data[7]
+
+	return uint64(data[0]) |
+		uint64(data[1])<<8 |
+		uint64(data[2])<<16 |
+		uint64(data[3])<<24 |
+		uint64(data[4])<<32 |
+		uint64(data[5])<<40 |
+		uint64(data[6])<<48 |
+		uint64(data7)<<56, nil
 }
 
 // Uint32N returns a uniform random value in [0, max).

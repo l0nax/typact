@@ -27,12 +27,14 @@ var (
 
 // RuneSequence returns a cryptographically secure random
 // sequence using the defined allowed runes.
-func RuneSequence(l int, allowedRunes []rune) (seq []rune, err error) {
+func RuneSequence(l int, allowedRunes []rune) ([]rune, error) {
 	maxLen := uint64(len(allowedRunes))
-	seq = make([]rune, l)
+	seq := make([]rune, l)
+
+	var buf [8]byte
 
 	for i := 0; i < l; i++ {
-		r, err := Uint64N(maxLen)
+		r, err := uint64NWithBuf(buf[:], maxLen)
 		if err != nil {
 			return seq, fmt.Errorf("unable to genrate random number: %w", err)
 		}
