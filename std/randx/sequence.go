@@ -28,16 +28,16 @@ var (
 // RuneSequence returns a cryptographically secure random
 // sequence using the defined allowed runes.
 func RuneSequence(l int, allowedRunes []rune) (seq []rune, err error) {
-	c := big.NewInt(int64(len(allowedRunes)))
+	maxLen := uint64(len(allowedRunes))
 	seq = make([]rune, l)
 
 	for i := 0; i < l; i++ {
-		r, err := rand.Int(rander, c)
+		r, err := Uint64N(maxLen)
 		if err != nil {
 			return seq, fmt.Errorf("unable to genrate random number: %w", err)
 		}
 
-		rn := allowedRunes[r.Uint64()]
+		rn := allowedRunes[r]
 		seq[i] = rn
 	}
 
