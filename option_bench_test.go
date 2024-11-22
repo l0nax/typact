@@ -541,3 +541,160 @@ func BenchmarkOption_Clone(b *testing.B) {
 		}
 	})
 }
+
+func BenchmarkOption_MarshalText(b *testing.B) {
+	b.Run("String", func(b *testing.B) {
+		b.ReportAllocs()
+
+		val := typact.Some("Hello")
+
+		for range b.N {
+			vv, err := val.MarshalText()
+			if err != nil {
+				b.Fatal(err)
+			}
+
+			_ = vv
+		}
+	})
+
+	b.Run("Int", func(b *testing.B) {
+		benchmarkMarshalText(int(46546), b)
+	})
+
+	b.Run("Int8", func(b *testing.B) {
+		benchmarkMarshalText(int8(46), b)
+	})
+
+	b.Run("Int16", func(b *testing.B) {
+		benchmarkMarshalText(int16(446), b)
+	})
+
+	b.Run("Int32", func(b *testing.B) {
+		benchmarkMarshalText(int32(446), b)
+	})
+
+	b.Run("Int64", func(b *testing.B) {
+		benchmarkMarshalText(int64(46546), b)
+	})
+
+	b.Run("Uint", func(b *testing.B) {
+		benchmarkMarshalText(uint(46546), b)
+	})
+
+	b.Run("Uint8", func(b *testing.B) {
+		benchmarkMarshalText(uint8(46), b)
+	})
+
+	b.Run("Uint16", func(b *testing.B) {
+		benchmarkMarshalText(uint16(46546), b)
+	})
+
+	b.Run("Uint32", func(b *testing.B) {
+		benchmarkMarshalText(uint32(46546), b)
+	})
+
+	b.Run("Uint64", func(b *testing.B) {
+		benchmarkMarshalText(uint64(46546), b)
+	})
+
+	b.Run("Float32", func(b *testing.B) {
+		benchmarkMarshalText(float32(46546.34), b)
+	})
+
+	b.Run("Float64", func(b *testing.B) {
+		benchmarkMarshalText(float64(46546.345), b)
+	})
+
+	b.Run("Bool", func(b *testing.B) {
+		benchmarkMarshalText(true, b)
+	})
+}
+
+func benchmarkMarshalText[T any](vv T, b *testing.B) {
+	b.ReportAllocs()
+
+	val := typact.Some(vv)
+
+	for range b.N {
+		vv, err := val.MarshalText()
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		_ = vv
+	}
+}
+
+func BenchmarkOption_UnmarshalText(b *testing.B) {
+	b.Run("String", func(b *testing.B) {
+		benchmarkUnmarshalText[string]([]byte("hello"), b)
+	})
+
+	//	b.Run("Int", func(b *testing.B) {
+	//		benchmarkMarshalText(int(46546), b)
+	//	})
+	//
+	//	b.Run("Int8", func(b *testing.B) {
+	//		benchmarkMarshalText(int8(46), b)
+	//	})
+	//
+	//	b.Run("Int16", func(b *testing.B) {
+	//		benchmarkMarshalText(int16(446), b)
+	//	})
+	//
+	//	b.Run("Int32", func(b *testing.B) {
+	//		benchmarkMarshalText(int32(446), b)
+	//	})
+	//
+	//	b.Run("Int64", func(b *testing.B) {
+	//		benchmarkMarshalText(int64(46546), b)
+	//	})
+	//
+	//	b.Run("Uint", func(b *testing.B) {
+	//		benchmarkMarshalText(uint(46546), b)
+	//	})
+	//
+	//	b.Run("Uint8", func(b *testing.B) {
+	//		benchmarkMarshalText(uint8(46), b)
+	//	})
+	//
+	//	b.Run("Uint16", func(b *testing.B) {
+	//		benchmarkMarshalText(uint16(46546), b)
+	//	})
+	//
+	//	b.Run("Uint32", func(b *testing.B) {
+	//		benchmarkMarshalText(uint32(46546), b)
+	//	})
+	//
+	//	b.Run("Uint64", func(b *testing.B) {
+	//		benchmarkMarshalText(uint64(46546), b)
+	//	})
+	//
+	//	b.Run("Float32", func(b *testing.B) {
+	//		benchmarkMarshalText(float32(46546.34), b)
+	//	})
+	//
+	//	b.Run("Float64", func(b *testing.B) {
+	//		benchmarkMarshalText(float64(46546.345), b)
+	//	})
+	//
+	//	b.Run("Bool", func(b *testing.B) {
+	//		benchmarkMarshalText(true, b)
+	//	})
+}
+
+func benchmarkUnmarshalText[T any](value []byte, b *testing.B) {
+	b.ReportAllocs()
+
+	val := typact.None[T]()
+
+	for range b.N {
+		err := val.UnmarshalText(value)
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		_ = val
+	}
+}
