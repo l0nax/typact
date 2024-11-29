@@ -2,6 +2,7 @@ package typact
 
 import (
 	"reflect"
+	"unsafe"
 
 	"go.l0nax.org/typact/internal/features"
 )
@@ -27,4 +28,16 @@ func isScalarCopyable(kind reflect.Kind) bool {
 	}
 
 	return false
+}
+
+// string2Bytes converts the given string to a byte slice without memory allocation.
+//
+// Note it may break if string and/or slice header will change in future go versions.
+func string2Bytes(s string) (b []byte) {
+	return unsafe.Slice(unsafe.StringData(s), len(s))
+}
+
+// bytes2String converts a byte slice to a string in a performant way.
+func bytes2String(bs []byte) string {
+	return unsafe.String(unsafe.SliceData(bs), len(bs))
 }

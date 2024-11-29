@@ -1,0 +1,3 @@
+title: Fix `UnmarshalText` and `MarshalText` to correctly handle scalar types
+type: 1
+author: Emanuel Bennici
