@@ -58,8 +58,11 @@ func Wrap[T any](val T, some bool) Option[T] {
 
 // IsZero returns whether o is [None].
 //
-// NOTE: This method is only added to support NULL values
-// within YAML. In all cases, IsNone and IsSome should be used!
+// NOTE: This method has only been added for compatibility with
+// unmarshaling/ marshaling libraries, e.g. YAML, TOML, JSON
+// in conjunction with the "omitzero" tag.
+//
+// Deprecated: Use [Option.IsNone] instead!
 func (o Option[T]) IsZero() bool {
 	return !o.some
 }
