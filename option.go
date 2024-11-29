@@ -4,8 +4,11 @@ import (
 	"bytes"
 	"database/sql"
 	"database/sql/driver"
+	"encoding"
 	"encoding/json"
 	"fmt"
+	"math"
+	"strconv"
 
 	"go.l0nax.org/typact/internal/types"
 )
@@ -434,13 +437,245 @@ func (o *Option[T]) UnmarshalJSON(data []byte) error {
 }
 
 // MarshalText implements the [encoding.TextMarshaler] interface.
-// It returns the JSON representation.
+//
+// Please not that for scalar types it is advised to define the "omitempty" tag!
 func (o Option[T]) MarshalText() ([]byte, error) {
-	return json.Marshal(o)
+	if !o.some {
+		return nil, nil
+	}
+
+	if !types.IsScalar[T]() {
+		enc, ok := any(o.val).(encoding.TextMarshaler)
+		if !ok {
+			return nil, fmt.Errorf("type %T does not implement encoding.TextMarshaler", o.val)
+		}
+
+		return enc.MarshalText()
+	}
+
+	// it's a scalar type
+	zz := any(o.val)
+
+	switch val := zz.(type) {
+	case string:
+		return string2Bytes(val), nil
+
+	case []byte:
+		return val, nil
+
+	case int:
+		raw := strconv.FormatInt(int64(val), 10)
+		return string2Bytes(raw), nil
+
+	case uint:
+		raw := strconv.FormatUint(uint64(val), 10)
+		return string2Bytes(raw), nil
+
+	case int8:
+		raw := strconv.FormatInt(int64(val), 10)
+		return string2Bytes(raw), nil
+
+	case uint8:
+		raw := strconv.FormatUint(uint64(val), 10)
+		return string2Bytes(raw), nil
+
+	case int16:
+		raw := strconv.FormatInt(int64(val), 10)
+		return string2Bytes(raw), nil
+
+	case uint16:
+		raw := strconv.FormatUint(uint64(val), 10)
+		return string2Bytes(raw), nil
+
+	case int32:
+		raw := strconv.FormatInt(int64(val), 10)
+		return string2Bytes(raw), nil
+
+	case uint32:
+		raw := strconv.FormatUint(uint64(val), 10)
+		return string2Bytes(raw), nil
+
+	case int64:
+		raw := strconv.FormatInt(int64(val), 10)
+		return string2Bytes(raw), nil
+
+	case uint64:
+		raw := strconv.FormatUint(uint64(val), 10)
+		return string2Bytes(raw), nil
+
+	case float32:
+		raw := strconv.FormatFloat(float64(val), 'f', -1, 32)
+		return string2Bytes(raw), nil
+
+	case float64:
+		raw := strconv.FormatFloat(float64(val), 'f', -1, 64)
+		return string2Bytes(raw), nil
+
+	case bool:
+		if val {
+			return []byte("true"), nil
+		}
+
+		return []byte("false"), nil
+	}
+
+	return nil, fmt.Errorf("type %T does not implement encoding.TextMarshaler", o.val)
 }
 
 // UnmarshalText implements the [encoding.TextUnmarshaler] interface.
-// It expects JSON as input.
+//
+// NOTE: when using scalar types, it is advised use the "omitzero" tag!
 func (o *Option[T]) UnmarshalText(data []byte) error {
-	return json.Unmarshal(data, o)
+	o.some = false
+
+	if !types.IsScalar[T]() {
+		enc, ok := any(o.val).(encoding.TextUnmarshaler)
+		if !ok {
+			// only allocate in slow path.
+			// this overrides any previously defined value in the field.
+			o.val = types.ZeroValue[T]()
+
+			return fmt.Errorf("type %T does not implement encoding.TextUnmarshaler", o.val)
+		}
+
+		if err := enc.UnmarshalText(data); err != nil {
+			// only allocate in slow path.
+			// this overrides any previously defined value in the field.
+			o.val = types.ZeroValue[T]()
+
+			return err
+		}
+
+		return nil
+	}
+
+	err := unmarshalText(&o.val, data)
+	if err != nil {
+		// only allocate in slow path.
+		// this overrides any previously defined value in the field.
+		o.val = types.ZeroValue[T]()
+
+		return fmt.Errorf("error unmarshaling data: %w", err)
+	}
+
+	return nil
+}
+
+func unmarshalText(dest interface{}, data []byte) error {
+	switch val := any(dest).(type) {
+	case *string:
+		*val = string(data)
+
+	case *int:
+		num, err := strconv.ParseInt(bytes2String(data), 10, 64)
+		if err != nil {
+			return err
+		}
+
+		if num < math.MinInt || num > math.MaxInt {
+			panic("under/overflow")
+		}
+
+		*val = int(num)
+
+	case *int8:
+		num, err := strconv.ParseInt(bytes2String(data), 10, 8)
+		if err != nil {
+			return err
+		}
+
+		*val = int8(num)
+
+	case *int16:
+		num, err := strconv.ParseInt(bytes2String(data), 10, 16)
+		if err != nil {
+			return err
+		}
+
+		*val = int16(num)
+
+	case *int32:
+		num, err := strconv.ParseInt(bytes2String(data), 10, 32)
+		if err != nil {
+			return err
+		}
+
+		*val = int32(num)
+
+	case *int64:
+		num, err := strconv.ParseInt(bytes2String(data), 10, 64)
+		if err != nil {
+			return err
+		}
+
+		*val = int64(num)
+
+	case *uint8:
+		num, err := strconv.ParseUint(bytes2String(data), 10, 8)
+		if err != nil {
+			return err
+		}
+
+		*val = uint8(num)
+
+	case *uint16:
+		num, err := strconv.ParseUint(bytes2String(data), 10, 16)
+		if err != nil {
+			return err
+		}
+
+		*val = uint16(num)
+
+	case *uint32:
+		num, err := strconv.ParseUint(bytes2String(data), 10, 32)
+		if err != nil {
+			return err
+		}
+
+		*val = uint32(num)
+
+	case *uint64:
+		num, err := strconv.ParseUint(bytes2String(data), 10, 64)
+		if err != nil {
+			return err
+		}
+
+		*val = uint64(num)
+
+	case *float32:
+		num, err := strconv.ParseFloat(bytes2String(data), 32)
+		if err != nil {
+			return err
+		}
+
+		*val = float32(num)
+
+	case *float64:
+		num, err := strconv.ParseFloat(bytes2String(data), 64)
+		if err != nil {
+			return err
+		}
+
+		*val = float64(num)
+
+	case *[]byte:
+		*val = []byte(data)
+
+	case *bool:
+		switch bytes2String(data) {
+		case "true":
+			*val = true
+
+		case "false":
+			*val = false
+
+		default:
+			return fmt.Errorf("invalid boolean value: %q", data)
+		}
+
+	default:
+		return fmt.Errorf("BUG: scalar type %T is not supported", dest)
+	}
+
+	return nil
 }
