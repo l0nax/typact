@@ -549,6 +549,8 @@ func (o *Option[T]) UnmarshalText(data []byte) error {
 			return err
 		}
 
+		o.some = true
+
 		return nil
 	}
 
@@ -560,6 +562,8 @@ func (o *Option[T]) UnmarshalText(data []byte) error {
 
 		return fmt.Errorf("error unmarshaling data: %w", err)
 	}
+
+	o.some = true
 
 	return nil
 }

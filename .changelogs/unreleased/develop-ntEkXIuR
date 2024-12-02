@@ -1,0 +1,3 @@
+title: Fix `UnmarshalText` to store `some = true` if unmarshal was successful
+type: 1
+author: Emanuel Bennici
