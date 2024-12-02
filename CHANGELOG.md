@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 
+## 0.3.2 (2024-12-02)
+
+### Fixed (1 change)
+- Fix `UnmarshalText` to store `some = true` if unmarshal was successful
+
+
 ## 0.3.0 (2024-11-29)
 
 ### Added (9 changes)
