@@ -443,7 +443,7 @@ func (o *Option[T]) UnmarshalJSON(data []byte) error {
 //
 // If T is not a scalar value and does not implement the TOMLMarshaler
 // interface, it fallsback to [Option.MarshalText] and wraps it as string.
-func (o *Option[T]) MarshalTOML() ([]byte, error) {
+func (o Option[T]) MarshalTOML() ([]byte, error) {
 	if !o.some {
 		// there are no null values in TOML, so return an error
 		return nil, fmt.Errorf("cannot marshal nil value")
