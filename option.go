@@ -468,11 +468,11 @@ func (o *Option[T]) MarshalTOML() ([]byte, error) {
 
 	switch val := zz.(type) {
 	case string:
-		raw := `"` + val + `"`
+		raw := `'` + val + `'`
 		return string2Bytes(raw), nil
 
 	case []byte:
-		raw := `"` + string(val) + `"`
+		raw := `'` + string(val) + `'`
 		return string2Bytes(raw), nil
 
 	case int:
