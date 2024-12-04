@@ -41,3 +41,7 @@ func string2Bytes(s string) (b []byte) {
 func bytes2String(bs []byte) string {
 	return unsafe.String(unsafe.SliceData(bs), len(bs))
 }
+
+type tomlMarshaler interface {
+	MarshalTOML() ([]byte, error)
+}
