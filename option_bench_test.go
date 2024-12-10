@@ -1,11 +1,13 @@
 package typact_test
 
 import (
+	"encoding"
 	"os"
 	"testing"
 	"time"
 
 	"go.l0nax.org/typact"
+	"go.l0nax.org/typact/std/xhash"
 )
 
 type SmallStruct struct {
@@ -697,4 +699,89 @@ func benchmarkUnmarshalText[T any](value []byte, b *testing.B) {
 
 		_ = val
 	}
+}
+
+func BenchmarkOption_Hash(b *testing.B) {
+	sum := 0
+
+	b.Run("None", func(b *testing.B) {
+		h := xhash.NewHasher()
+		val := typact.None[string]()
+
+		b.ReportAllocs()
+
+		for range b.N {
+			val.Hash(h)
+
+			sum += int(h.Sum64())
+			h.Reset()
+		}
+	})
+
+	b.Run("Some/case=scalar", func(b *testing.B) {
+		h := xhash.NewHasher()
+		val := typact.None[string]()
+
+		b.ReportAllocs()
+
+		for range b.N {
+			val.Hash(h)
+
+			sum += int(h.Sum64())
+			h.Reset()
+		}
+	})
+
+	b.Run("Some/case=custom", func(b *testing.B) {
+		h := xhash.NewHasher()
+		val := typact.Some(customHasher{})
+
+		b.ReportAllocs()
+
+		for range b.N {
+			val.Hash(h)
+
+			sum += int(h.Sum64())
+			h.Reset()
+		}
+	})
+
+	b.Run("Some/case=complex", func(b *testing.B) {
+		h := xhash.NewHasher()
+		val := typact.Some(complexType{})
+
+		b.ReportAllocs()
+
+		for range b.N {
+			val.Hash(h)
+
+			sum += int(h.Sum64())
+			h.Reset()
+		}
+	})
+
+	_ = sum
+}
+
+type customHasher struct{}
+
+func (customHasher) Hash(h xhash.Hasher) {
+	h.WriteString("Hello World")
+}
+
+type complexType struct {
+	Fn    func()
+	Str   string
+	Num   int64
+	Ch    chan string
+	Slice []string
+	Data  [8]byte
+	Enc   encoding.TextMarshaler
+	Ptr   *complexType
+}
+
+type customStringHasher string
+
+func (customStringHasher) Hash(h xhash.Hasher) {
+	h.WriteString("Hello World")
 }

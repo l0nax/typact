@@ -1,12 +1,15 @@
 package option_test
 
 import (
+	"encoding"
 	"encoding/json"
 	"fmt"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	"go.l0nax.org/typact"
+	"go.l0nax.org/typact/std/xhash"
 )
 
 var _ = Describe("Option", func() {
@@ -625,6 +628,81 @@ var _ = Describe("Option", func() {
 			})
 		})
 	})
+
+	Describe("Hash", func() {
+		It("should hash the value", func() {
+			var vv typact.Option[string]
+
+			h := xhash.NewHasher()
+			vv.Hash(h)
+
+			_ = h.Sum64()
+		})
+
+		It("should hash the custom string", func() {
+			vv := typact.Some(customStringHasher("hello world"))
+
+			h := xhash.NewHasher()
+			vv.Hash(h)
+
+			_ = h.Sum64()
+		})
+
+		It("should hash a custom value", func() {
+			vv := typact.Some(customHasher{})
+
+			h := xhash.NewHasher()
+			vv.Hash(h)
+
+			_ = h.Sum64()
+		})
+
+		It("should hash a complex value", func() {
+			vv := typact.Some(complexType{})
+
+			h := xhash.NewHasher()
+			vv.Hash(h)
+
+			_ = h.Sum64()
+		})
+
+		It("should return the same hash", func() {
+			vv := typact.Some(complexType{
+				Map: make(map[string]customStringHasher),
+				CmpMap: map[*complexType]customStringHasher{
+					&complexType{}: customStringHasher("hello world"),
+				},
+			})
+
+			h := xhash.NewHasher()
+			vv.Hash(h)
+
+			r1 := h.Sum64()
+			h.Reset()
+
+			vv.Hash(h)
+
+			r2 := h.Sum64()
+			Expect(r1).To(Equal(r2))
+		})
+
+		It("should use the custom Hash for ptr recv with ptr", func() {
+			vv := typact.Some(&customHasher{})
+
+			h := xhash.NewHasher()
+			vv.Hash(h)
+
+			r1 := h.Sum64()
+			h.Reset()
+
+			vv.Hash(h)
+
+			r2 := h.Sum64()
+			Expect(r1).To(Equal(r2))
+
+			Expect(vv.Unwrap().didCall).To(BeTrue())
+		})
+	})
 })
 
 type errScanner struct {
@@ -647,4 +725,32 @@ func (c *customScanner) Scan(val any) error {
 	}
 
 	return fmt.Errorf("unsupported type %T", val)
+}
+
+type customHasher struct {
+	didCall bool
+}
+
+func (c *customHasher) Hash(h xhash.Hasher) {
+	c.didCall = true
+	h.WriteString("Hello World")
+}
+
+type complexType struct {
+	Fn     func()
+	Str    string
+	Num    int64
+	Ch     chan string
+	Slice  []string
+	Data   [8]byte
+	Enc    encoding.TextMarshaler
+	Ptr    *complexType
+	Map    map[string]customStringHasher
+	CmpMap map[*complexType]customStringHasher
+}
+
+type customStringHasher string
+
+func (customStringHasher) Hash(h xhash.Hasher) {
+	h.WriteString("Hello World")
 }

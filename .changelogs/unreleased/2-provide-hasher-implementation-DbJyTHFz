@@ -1,0 +1,3 @@
+title: Add `std/xhash` package, providing a type hasher implementation
+type: 0
+author: Emanuel Bennici

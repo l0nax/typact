@@ -11,6 +11,7 @@ import (
 	"strconv"
 
 	"go.l0nax.org/typact/internal/types"
+	"go.l0nax.org/typact/std/xhash"
 )
 
 // Option represents an optional value.
@@ -780,4 +781,23 @@ func unmarshalText(dest interface{}, data []byte) error {
 	}
 
 	return nil
+}
+
+// Hash implements the [xhash.Hasher] interface.
+func (o Option[T]) Hash(h xhash.Hasher) {
+	if !o.some {
+		h.WriteUint64(1) // 1 = None
+		return
+	}
+
+	h.WriteUint64(2) // 2 = Some
+
+	// TODO: Benchmark if this path is faster
+	if types.IsScalar[T]() {
+		h.WriteInterface(any(o.val))
+
+		return
+	}
+
+	h.WriteInterface(any(o.val))
 }
