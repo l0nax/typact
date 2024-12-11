@@ -801,3 +801,16 @@ func (o Option[T]) Hash(h xhash.Hasher) {
 
 	h.WriteInterface(any(o.val))
 }
+
+// String implements the [fmt.Stringer] interface.
+//
+// If it is [Some], it calls the underlying value's [fmt.Stringer] method, if available.
+func (o Option[T]) String() string {
+	if !o.some {
+		return "None"
+	}
+
+	// %v will either call the underlying value's [fmt.Stringer] method,
+	// or create the string representation.
+	return fmt.Sprintf("Some(%v)", o.val)
+}
