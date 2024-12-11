@@ -110,9 +110,8 @@ func (d *defaultHasher) reflectWrite(val reflect.Value) {
 	valKind := val.Kind()
 
 	if val.IsValid() {
-		impl, ok := val.Interface().(Hashable)
-		if ok {
-			impl.Hash(d)
+		if typ.Implements(hashableImpl) {
+			val.Interface().(Hashable).Hash(d)
 			return
 		}
 	}

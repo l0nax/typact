@@ -6,7 +6,7 @@ import (
 )
 
 // hashableImpl holds the [reflect.Type] of [Hashable].
-var hashableImpl = reflect.TypeOf((Hashable)(nil))
+var hashableImpl = reflect.TypeOf((*Hashable)(nil)).Elem()
 
 // Hashable is implemented by custom types to allow them to be hashed.
 //
