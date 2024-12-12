@@ -142,12 +142,12 @@ func (d *defaultHasher) reflectWrite(val reflect.Value) {
 			d.WriteUint64(uint64(i))
 
 			// skip all non-exported fields
-			fldTyp := typ.Field(i)
-			if !fldTyp.IsExported() {
+			fld := val.Field(i)
+			if !fld.CanInterface() {
 				continue
 			}
 
-			d.reflectWrite(val.Field(i))
+			d.reflectWrite(fld)
 		}
 
 	case reflect.Complex64, reflect.Complex128:
