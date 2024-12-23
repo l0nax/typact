@@ -1,0 +1,3 @@
+title: Implement `xhash.Hashable` interface for `typact.Option`
+type: 0
+author: Emanuel Bennici

@@ -10,5 +10,5 @@ func IsZero[T comparable](val T) bool {
 // It's the opposite of [IsZero].
 func IsNotZero[T comparable](val T) bool {
 	var zero T
-	return val == zero
+	return val != zero
 }

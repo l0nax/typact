@@ -11,6 +11,7 @@ import (
 	"strconv"
 
 	"go.l0nax.org/typact/internal/types"
+	"go.l0nax.org/typact/std/xhash"
 )
 
 // Option represents an optional value.
@@ -58,8 +59,11 @@ func Wrap[T any](val T, some bool) Option[T] {
 
 // IsZero returns whether o is [None].
 //
-// NOTE: This method is only added to support NULL values
-// within YAML. In all cases, IsNone and IsSome should be used!
+// NOTE: This method has only been added for compatibility with
+// unmarshaling/ marshaling libraries, e.g. YAML, TOML, JSON
+// in conjunction with the "omitzero" tag.
+//
+// Deprecated: Use [Option.IsNone] instead!
 func (o Option[T]) IsZero() bool {
 	return !o.some
 }
@@ -436,6 +440,101 @@ func (o *Option[T]) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalTOML implements a TOML (v1) marshaler.
+//
+// If T is not a scalar value and does not implement the TOMLMarshaler
+// interface, it fallsback to [Option.MarshalText] and wraps it as string.
+func (o Option[T]) MarshalTOML() ([]byte, error) {
+	if !o.some {
+		// there are no null values in TOML, so return an error
+		return nil, fmt.Errorf("cannot marshal nil value")
+	}
+
+	if !types.IsScalar[T]() {
+		enc, ok := any(o.val).(tomlMarshaler)
+		if ok {
+			return enc.MarshalTOML()
+		}
+
+		data, err := o.MarshalText()
+		if err != nil {
+			return nil, fmt.Errorf("unable to marshal TOML: %w", err)
+		}
+
+		return data, nil
+	}
+
+	// it's a scalar type
+	zz := any(o.val)
+
+	switch val := zz.(type) {
+	case string:
+		raw := `'` + val + `'`
+		return string2Bytes(raw), nil
+
+	case []byte:
+		raw := `'` + string(val) + `'`
+		return string2Bytes(raw), nil
+
+	case int:
+		raw := strconv.FormatInt(int64(val), 10)
+		return string2Bytes(raw), nil
+
+	case uint:
+		raw := strconv.FormatUint(uint64(val), 10)
+		return string2Bytes(raw), nil
+
+	case int8:
+		raw := strconv.FormatInt(int64(val), 10)
+		return string2Bytes(raw), nil
+
+	case uint8:
+		raw := strconv.FormatUint(uint64(val), 10)
+		return string2Bytes(raw), nil
+
+	case int16:
+		raw := strconv.FormatInt(int64(val), 10)
+		return string2Bytes(raw), nil
+
+	case uint16:
+		raw := strconv.FormatUint(uint64(val), 10)
+		return string2Bytes(raw), nil
+
+	case int32:
+		raw := strconv.FormatInt(int64(val), 10)
+		return string2Bytes(raw), nil
+
+	case uint32:
+		raw := strconv.FormatUint(uint64(val), 10)
+		return string2Bytes(raw), nil
+
+	case int64:
+		raw := strconv.FormatInt(int64(val), 10)
+		return string2Bytes(raw), nil
+
+	case uint64:
+		raw := strconv.FormatUint(uint64(val), 10)
+		return string2Bytes(raw), nil
+
+	case float32:
+		raw := strconv.FormatFloat(float64(val), 'f', -1, 32)
+		return string2Bytes(raw), nil
+
+	case float64:
+		raw := strconv.FormatFloat(float64(val), 'f', -1, 64)
+		return string2Bytes(raw), nil
+
+	case bool:
+		if val {
+			return []byte("true"), nil
+		}
+
+		return []byte("false"), nil
+	}
+
+	return nil, fmt.Errorf("type %T does not implement TOMLMarshaler", o.val)
+}
+
 // MarshalText implements the [encoding.TextMarshaler] interface.
 //
 // Please not that for scalar types it is advised to define the "omitempty" tag!
@@ -546,6 +645,8 @@ func (o *Option[T]) UnmarshalText(data []byte) error {
 			return err
 		}
 
+		o.some = true
+
 		return nil
 	}
 
@@ -557,6 +658,8 @@ func (o *Option[T]) UnmarshalText(data []byte) error {
 
 		return fmt.Errorf("error unmarshaling data: %w", err)
 	}
+
+	o.some = true
 
 	return nil
 }
@@ -678,4 +781,36 @@ func unmarshalText(dest interface{}, data []byte) error {
 	}
 
 	return nil
+}
+
+// Hash implements the [xhash.Hasher] interface.
+func (o Option[T]) Hash(h xhash.Hasher) {
+	if !o.some {
+		h.WriteUint64(1) // 1 = None
+		return
+	}
+
+	h.WriteUint64(2) // 2 = Some
+
+	// TODO: Benchmark if this path is faster
+	if types.IsScalar[T]() {
+		h.WriteInterface(any(o.val))
+
+		return
+	}
+
+	h.WriteInterface(any(o.val))
+}
+
+// String implements the [fmt.Stringer] interface.
+//
+// If it is [Some], it calls the underlying value's [fmt.Stringer] method, if available.
+func (o Option[T]) String() string {
+	if !o.some {
+		return "None"
+	}
+
+	// %v will either call the underlying value's [fmt.Stringer] method,
+	// or create the string representation.
+	return fmt.Sprintf("Some(%v)", o.val)
 }

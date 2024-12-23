@@ -142,7 +142,7 @@ func ExampleOption_Filter_slice() {
 	fmt.Println(x)
 
 	// Output:
-	// [{foo true} {bar true} {baz true} {hello true} {world true}]
+	// [Some(foo) Some(bar) Some(baz) Some(hello) Some(world)]
 }
 
 func IsZero[T comparable](val T) bool {
