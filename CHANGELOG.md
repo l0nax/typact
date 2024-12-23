@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 
+## 0.4.0 (2024-12-23)
+
+### Added (3 changes)
+- Add `std/xhash` package, providing a type hasher implementation
+- Implement `String` method to `Option` type
+- Implement `xhash.Hashable` interface for `typact.Option`
+
+
 ## 0.3.2 (2024-12-02)
 
 ### Fixed (1 change)
