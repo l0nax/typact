@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 
+## 0.5.0 (2025-02-14)
+
+### Added (1 change)
+- Add `Mutex[T]` to experimental typact package
+
+
 ## 0.4.0 (2024-12-23)
 
 ### Added (3 changes)
