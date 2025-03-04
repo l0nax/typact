@@ -61,8 +61,13 @@ func (m *Mutex[T]) Set(val T) {
 // WithLock acquires a lock, calls fn with the value and updates
 // the internal value with the one returned by fn.
 // The lock is released once this method returns.
-func (m *Mutex[T]) WithLock(fn func(T) T) {
+//
+// The method returns the value returned by fn, i.e., the change value
+func (m *Mutex[T]) WithLock(fn func(T) T) T {
 	m.lock.Lock()
-	m.value = fn(m.value)
+	val := fn(m.value)
+	m.value = val
 	m.lock.Unlock()
+
+	return val
 }
